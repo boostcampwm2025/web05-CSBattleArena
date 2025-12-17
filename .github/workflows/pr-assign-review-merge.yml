@@ -105,7 +105,24 @@ jobs:
                           core.setFailed('PR에 충돌이 있어 자동 머지를 진행할 수 없습니다.');
                           return;
                         }
-                        
+
+                        // CI 체크 상태 확인
+                        const checks = await github.rest.checks.listForRef({
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          ref: pr.data.head.sha
+                        });
+
+                        const allChecksPassed = checks.data.check_runs.every(check =>
+                          check.status === 'completed' && check.conclusion === 'success'
+                        );
+
+                        if (!allChecksPassed) {
+                          console.log('CI 체크가 통과하지 못했습니다.');
+                          core.setFailed('CI 체크를 통과해야 자동 머지가 가능합니다.');
+                          return;
+                        }
+
                         const reviews = await github.rest.pulls.listReviews({
                           owner: context.repo.owner,
                           repo: context.repo.repo,
