@@ -1,19 +1,7 @@
-import { useState } from 'react'
+import Home from "@/pages/home/Home";
 
-function App() {
-  const [count, setCount] = useState(0)
-
+export default function App() {
   return (
-    <div className="App">
-      <h1>BoostCamp Web05</h1>
-      <div>
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-      </div>
-      <p>React + TypeScript + Vite</p>
-    </div>
-  )
+    <Home />
+  );
 }
-
-export default App
