@@ -78,7 +78,6 @@ export default tseslint.config(
     {
         files: ['**/*.spec.ts', '**/*.test.ts'],
         rules: {
-            // 아래 부분 공백 제거됨
             '@typescript-eslint/no-explicit-any': 'off',
         },
     }
