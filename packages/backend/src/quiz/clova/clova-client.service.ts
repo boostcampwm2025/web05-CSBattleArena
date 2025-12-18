@@ -13,7 +13,7 @@ export class ClovaClientService {
   private readonly logger = new Logger(ClovaClientService.name);
   private readonly apiKey: string;
   private readonly apiUrl =
-    'https://clovastudio.stream.ntruss.com/testapp/v1/chat-completions/HCX-003';
+    'https://clovastudio.stream.ntruss.com/testapp/v3/chat-completions/HCX-005';
 
   constructor(private readonly configService: ConfigService) {
     this.apiKey = this.configService.get<string>('CLOVA_STUDIO_API_KEY') || '';
@@ -27,7 +27,10 @@ export class ClovaClientService {
     };
 
     const payload = {
-      messages: [{ role: 'system', content: dto.systemPrompt }],
+      messages: [
+        { role: 'system', content: dto.systemPrompt },
+        { role: 'user', content: dto.userPrompt },
+      ],
       topP: 0.8,
       topK: 0,
       maxTokens: 1500,
