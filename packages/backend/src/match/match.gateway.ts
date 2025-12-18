@@ -26,6 +26,9 @@ export class MatchGateway implements OnGatewayDisconnect {
       this.server
         .to(match.player2)
         .emit('match.found', { roomId: match.roomId, opponentId: match.player1 });
+    } else {
+      const queueSize = this.matchService.getQueueSize();
+      client.emit('match.waiting', { queueSize });
     }
   }
 
