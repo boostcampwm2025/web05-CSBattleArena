@@ -1,4 +1,5 @@
-export default function RoundResult() {
+// TODO: 파라미터는 데모 이후 제거
+export default function RoundResult({ time, onClick, stopTimer }: { time: number; onClick: () => void; stopTimer: () => void; }) {
   return (
     <div className="flex h-full items-center justify-center">
       <div className="flex w-full max-w-4xl flex-col gap-6">
@@ -10,7 +11,8 @@ export default function RoundResult() {
             ROUND 1 RESULT
           </div>
           <div className="text-xl font-bold text-amber-400" style={{ fontFamily: 'Orbitron' }}>
-            Next round in 5...
+            {/* TODO: 데모용 파라미터 사용 로직, 추후 제거 필요 */}
+            Next round in {time}...
           </div>
         </div>
 
@@ -79,6 +81,19 @@ export default function RoundResult() {
             CORRECT ANSWER
           </div>
         </div>
+      </div>
+
+      {/* TODO: 데모 이후 버튼 제거 */}
+      {/* Buttons for demonstration */}
+      <div className="absolute bottom-4 left-4 z-50 flex gap-2">
+        <button
+          className="rounded border border-white/20 bg-white/10 px-3 py-2 text-white"
+          onClick={onClick}
+        />
+        <button
+          className="rounded border border-white/20 bg-white/10 px-3 py-2 text-white"
+          onClick={stopTimer}
+        />
       </div>
     </div>
   );

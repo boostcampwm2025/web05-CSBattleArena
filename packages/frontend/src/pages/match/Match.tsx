@@ -1,6 +1,7 @@
 import { useMatch } from '@/feature/matching/useMatch';
 
 import Matching from './components/Matching';
+import InGame from './components/InGame';
 
 export default function Match() {
   const { matchState } = useMatch();
@@ -22,6 +23,7 @@ export default function Match() {
       </div>
 
       {matchState === 'matching' && <Matching />}
+      {matchState === 'inGame' && <InGame />}
     </div>
   );
 }
