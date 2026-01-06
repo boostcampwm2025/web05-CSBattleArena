@@ -1,6 +1,9 @@
 import { createContext, useContext } from 'react';
 import { useEffect, useState } from 'react';
 
+import { getSocket } from '@/lib/socket';
+import { useUser } from '@/feature/auth/useUser';
+
 type MatchState = 'matching' | 'inGame';
 type MatchAPI = {
   matchState: MatchState;
@@ -10,15 +13,19 @@ type MatchAPI = {
 const MatchCtx = createContext<MatchAPI | null>(null);
 
 export function MatchProvider({ children }: { children: React.ReactNode }) {
+  // TODO: 추후 OAuth2로 인증 방식 변경 후 user:info 이벤트 제거
+  const {setUserData} = useUser();
   const [matchState, setMatchState] = useState<MatchState>('matching');
 
   useEffect(() => {
-    // TODO: 마운트 시 소켓 연결
-    // socket.connect();
+    const socket = getSocket();
 
-    // TODO: 언마운트 시 소켓 정리
+    socket.on("user:info", setUserData);
+    socket.connect();
+
     return () => {
-      // socket.disconnect();
+      socket.off("user:info", setUserData);
+      socket.disconnect();
     };
   }, []);
 
