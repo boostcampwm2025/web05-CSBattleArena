@@ -1,15 +1,10 @@
 import { useState } from 'react';
 
-// TODO: 파라미터는 데모 이후 제거
-export default function Playing({
-  time,
-  onClick,
-  stopTimer,
-}: {
-  time: number;
-  onClick: () => void;
-  stopTimer: () => void;
-}) {
+import { useRoundTick } from '@/feature/matching/useRound';
+
+export default function Playing() {
+  const { remainedSec } = useRoundTick();
+
   const [isSubmit, setIsSubmit] = useState<boolean>(false);
 
   return (
@@ -32,8 +27,7 @@ export default function Playing({
             </div>
             <div className="text-lg font-bold text-cyan-300" style={{ fontFamily: 'Orbitron' }}>
               <i className="ri-time-line mr-2"></i>
-              {/* TODO: 데모용 파라미터 사용 로직, 추후 제거 필요 */}
-              {time}s
+              {remainedSec}s
             </div>
           </div>
 
@@ -68,19 +62,6 @@ export default function Playing({
             </div>
           )}
         </div>
-      </div>
-
-      {/* TODO: 데모 이후 버튼 제거 */}
-      {/* Buttons for demonstration */}
-      <div className="absolute bottom-4 left-4 z-50 flex gap-2">
-        <button
-          className="rounded border border-white/20 bg-white/10 px-3 py-2 text-white"
-          onClick={onClick}
-        />
-        <button
-          className="rounded border border-white/20 bg-white/10 px-3 py-2 text-white"
-          onClick={stopTimer}
-        />
       </div>
     </div>
   );

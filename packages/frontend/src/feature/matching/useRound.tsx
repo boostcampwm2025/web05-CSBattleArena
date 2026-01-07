@@ -30,6 +30,8 @@ type RoundScoreAPI = {
   opponentDelta: number;
   opponentTotal: number;
   opponentIsCorrect: boolean;
+  bestAnswer: string;
+  explanation: string;
 };
 
 const RoundPhaseCtx = createContext<RoundPhaseAPI | null>(null);
@@ -51,6 +53,8 @@ export function RoundProvider({ children }: { children: React.ReactNode }) {
   const [opponentDelta, setOpponentDelta] = useState<number>(0);
   const [opponentTotal, setOpponentTotal] = useState<number>(0);
   const [opponentIsCorrect, setOpponentIsCorrect] = useState<boolean>(false);
+  const [bestAnswer, setBestAnswer] = useState<string>('');
+  const [explanation, setExplanation] = useState<string>('');
 
   const socketRef = useRef(getSocket());
 
@@ -78,6 +82,8 @@ export function RoundProvider({ children }: { children: React.ReactNode }) {
     setOpponentDelta(payload.result.opponent.delta);
     setOpponentTotal(payload.result.opponent.total);
     setOpponentIsCorrect(payload.result.opponent.correct);
+    setBestAnswer(payload.solution.bestAnswer);
+    setExplanation(payload.solution.explanation);
   }, []);
 
   const handleRoundTick = useCallback((payload: RoundTick) => {
@@ -120,6 +126,8 @@ export function RoundProvider({ children }: { children: React.ReactNode }) {
               opponentDelta,
               opponentTotal,
               opponentIsCorrect,
+              bestAnswer,
+              explanation,
             }}
           >
             {children}

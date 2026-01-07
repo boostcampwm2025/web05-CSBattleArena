@@ -1,13 +1,14 @@
-// TODO: 파라미터는 데모 이후 제거
-export default function RoundResult({
-  time,
-  onClick,
-  stopTimer,
-}: {
-  time: number;
-  onClick: () => void;
-  stopTimer: () => void;
-}) {
+import { useUser } from '@/feature/auth/useUser';
+import { useMatch } from '@/feature/matching/useMatch';
+import { useRoundPhase, useRoundScore, useRoundTick } from '@/feature/matching/useRound';
+
+export default function RoundResult() {
+  const { userData } = useUser();
+  const { opponentInfo } = useMatch();
+  const { roundIndex } = useRoundPhase();
+  const { remainedSec } = useRoundTick();
+  const { myAnswer, myIsCorrect, opponentAnswer, opponentIsCorrect, bestAnswer } = useRoundScore();
+
   return (
     <div className="flex h-full items-center justify-center">
       <div className="flex w-full max-w-4xl flex-col gap-6">
@@ -16,11 +17,10 @@ export default function RoundResult({
             className="bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-4xl font-black text-transparent"
             style={{ fontFamily: '"Press Start 2P"' }}
           >
-            ROUND 1 RESULT
+            ROUND {roundIndex} RESULT
           </div>
           <div className="text-xl font-bold text-amber-400" style={{ fontFamily: 'Orbitron' }}>
-            {/* TODO: 데모용 파라미터 사용 로직, 추후 제거 필요 */}
-            Next round in {time}...
+            Next round in {remainedSec}...
           </div>
         </div>
 
@@ -32,7 +32,7 @@ export default function RoundResult({
                 <i className="ri-user-star-line text-2xl text-white" />
               </div>
               <div className="text-lg font-bold text-cyan-300" style={{ fontFamily: 'Orbitron' }}>
-                CodeMaster
+                {userData?.nickname}
               </div>
             </div>
             <div className="flex flex-col gap-3">
@@ -40,14 +40,28 @@ export default function RoundResult({
                 YOUR ANSWER
               </div>
               <div className="text-base text-white" style={{ fontFamily: 'Orbitron' }}>
-                No answer
+                {myAnswer}
               </div>
             </div>
-            <div className={'border-2 border-red-400 bg-red-500/20 py-2 text-center'}>
-              <p className={'text-base font-bold text-red-400'} style={{ fontFamily: 'Orbitron' }}>
-                ✗ WRONG
-              </p>
-            </div>
+            {myIsCorrect ? (
+              <div className="border-2 border-emerald-400 bg-emerald-500/20 py-2 text-center">
+                <p
+                  className="text-base font-bold text-emerald-400"
+                  style={{ fontFamily: 'Orbitron' }}
+                >
+                  ✓ CORRECT
+                </p>
+              </div>
+            ) : (
+              <div className={'border-2 border-red-400 bg-red-500/20 py-2 text-center'}>
+                <p
+                  className={'text-base font-bold text-red-400'}
+                  style={{ fontFamily: 'Orbitron' }}
+                >
+                  ✗ WRONG
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Opponent Answer */}
@@ -57,7 +71,7 @@ export default function RoundResult({
                 <i className="ri-user-star-line text-2xl text-white" />
               </div>
               <div className="text-lg font-bold text-pink-300" style={{ fontFamily: 'Orbitron' }}>
-                ByteNinja
+                {opponentInfo?.nickname}
               </div>
             </div>
             <div className="flex flex-col gap-3">
@@ -65,17 +79,28 @@ export default function RoundResult({
                 OPPONENT ANSWER
               </div>
               <div className="text-base text-white" style={{ fontFamily: 'Orbitron' }}>
-                No Answer
+                {opponentAnswer}
               </div>
             </div>
-            <div className="border-2 border-emerald-400 bg-emerald-500/20 py-2 text-center">
-              <p
-                className="text-base font-bold text-emerald-400"
-                style={{ fontFamily: 'Orbitron' }}
-              >
-                ✓ CORRECT
-              </p>
-            </div>
+            {opponentIsCorrect ? (
+              <div className="border-2 border-emerald-400 bg-emerald-500/20 py-2 text-center">
+                <p
+                  className="text-base font-bold text-emerald-400"
+                  style={{ fontFamily: 'Orbitron' }}
+                >
+                  ✓ CORRECT
+                </p>
+              </div>
+            ) : (
+              <div className={'border-2 border-red-400 bg-red-500/20 py-2 text-center'}>
+                <p
+                  className={'text-base font-bold text-red-400'}
+                  style={{ fontFamily: 'Orbitron' }}
+                >
+                  ✗ WRONG
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -86,22 +111,9 @@ export default function RoundResult({
             CORRECT ANSWER
           </div>
           <div className="text-base text-white" style={{ fontFamily: 'Orbitron' }}>
-            CORRECT ANSWER
+            {bestAnswer}
           </div>
         </div>
-      </div>
-
-      {/* TODO: 데모 이후 버튼 제거 */}
-      {/* Buttons for demonstration */}
-      <div className="absolute bottom-4 left-4 z-50 flex gap-2">
-        <button
-          className="rounded border border-white/20 bg-white/10 px-3 py-2 text-white"
-          onClick={onClick}
-        />
-        <button
-          className="rounded border border-white/20 bg-white/10 px-3 py-2 text-white"
-          onClick={stopTimer}
-        />
       </div>
     </div>
   );
