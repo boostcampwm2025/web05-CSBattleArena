@@ -277,5 +277,168 @@ describe('QuizService', () => {
 
       expect(result[0].difficulty).toBe('medium');
     });
+
+    it('should throw error when less than 5 questions available', async () => {
+      const mockDbQuestions = [
+        {
+          id: 1,
+          questionType: 'multiple' as const,
+          content: 'Test question',
+          correctAnswer: JSON.stringify({
+            options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+            answer: 'A',
+          }),
+          difficulty: 1,
+          isActive: true,
+        },
+      ];
+
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(mockDbQuestions),
+      };
+
+      mockQuestionRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder,
+      );
+
+      await expect(service.generateQuestion()).rejects.toThrow(
+        '질문 생성에 실패했습니다',
+      );
+    });
+
+    it('should throw error when JSON parsing fails for multiple choice', async () => {
+      const mockDbQuestions = [
+        {
+          id: 1,
+          questionType: 'multiple' as const,
+          content: 'Test',
+          correctAnswer: 'invalid json',
+          difficulty: 1,
+          isActive: true,
+        },
+        {
+          id: 2,
+          questionType: 'multiple' as const,
+          content: 'Test2',
+          correctAnswer: JSON.stringify({ options: { A: 'A' }, answer: 'A' }),
+          difficulty: 1,
+          isActive: true,
+        },
+        {
+          id: 3,
+          questionType: 'multiple' as const,
+          content: 'Test3',
+          correctAnswer: JSON.stringify({ options: { A: 'A' }, answer: 'A' }),
+          difficulty: 1,
+          isActive: true,
+        },
+        {
+          id: 4,
+          questionType: 'multiple' as const,
+          content: 'Test4',
+          correctAnswer: JSON.stringify({ options: { A: 'A' }, answer: 'A' }),
+          difficulty: 1,
+          isActive: true,
+        },
+        {
+          id: 5,
+          questionType: 'multiple' as const,
+          content: 'Test5',
+          correctAnswer: JSON.stringify({ options: { A: 'A' }, answer: 'A' }),
+          difficulty: 1,
+          isActive: true,
+        },
+      ];
+
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(mockDbQuestions),
+      };
+
+      mockQuestionRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder,
+      );
+
+      await expect(service.generateQuestion()).rejects.toThrow(
+        '질문 생성 중 오류가 발생했습니다',
+      );
+    });
+
+    it('should throw error when correctAnswer is missing for short answer', async () => {
+      const mockDbQuestions = [
+        {
+          id: 1,
+          questionType: 'short' as const,
+          content: 'Test',
+          correctAnswer: '',
+          difficulty: 1,
+          isActive: true,
+        },
+        {
+          id: 2,
+          questionType: 'multiple' as const,
+          content: 'Test2',
+          correctAnswer: JSON.stringify({
+            options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+            answer: 'A',
+          }),
+          difficulty: 1,
+          isActive: true,
+        },
+        {
+          id: 3,
+          questionType: 'multiple' as const,
+          content: 'Test3',
+          correctAnswer: JSON.stringify({
+            options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+            answer: 'A',
+          }),
+          difficulty: 1,
+          isActive: true,
+        },
+        {
+          id: 4,
+          questionType: 'multiple' as const,
+          content: 'Test4',
+          correctAnswer: JSON.stringify({
+            options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+            answer: 'A',
+          }),
+          difficulty: 1,
+          isActive: true,
+        },
+        {
+          id: 5,
+          questionType: 'multiple' as const,
+          content: 'Test5',
+          correctAnswer: JSON.stringify({
+            options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+            answer: 'A',
+          }),
+          difficulty: 1,
+          isActive: true,
+        },
+      ];
+
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(mockDbQuestions),
+      };
+
+      mockQuestionRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder,
+      );
+
+      await expect(service.generateQuestion()).rejects.toThrow(
+        '질문 생성 중 오류가 발생했습니다',
+      );
+    });
   });
 });
