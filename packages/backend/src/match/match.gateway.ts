@@ -76,28 +76,34 @@ export class MatchGateway implements OnGatewayConnection, OnGatewayDisconnect {
           this.sessionManager.addToRoom(match.roomId, match.player1);
           this.sessionManager.addToRoom(match.roomId, match.player2);
 
-          this.server.sockets.sockets.get(player1Session.socketId)?.join(match.roomId);
-          this.server.sockets.sockets.get(player2Session.socketId)?.join(match.roomId);
-
           setImmediate(() => {
-            this.server.to(player1Session.socketId).emit('match:found', {
-              opponent: player2Session.userInfo,
-            });
+            Promise.all([
+              this.server.sockets.sockets.get(player1Session.socketId)?.join(match.roomId),
+              this.server.sockets.sockets.get(player2Session.socketId)?.join(match.roomId),
+            ])
+              .then(() => {
+                this.server.to(player1Session.socketId).emit('match:found', {
+                  opponent: player2Session.userInfo,
+                });
 
-            this.server.to(player2Session.socketId).emit('match:found', {
-              opponent: player1Session.userInfo,
-            });
+                this.server.to(player2Session.socketId).emit('match:found', {
+                  opponent: player1Session.userInfo,
+                });
 
-            this.matchService.startGame(
-              match.roomId,
-              match.player1,
-              player1Session.socketId,
-              player1Session.userInfo,
-              match.player2,
-              player2Session.socketId,
-              player2Session.userInfo,
-              this.server,
-            );
+                this.matchService.startGame(
+                  match.roomId,
+                  match.player1,
+                  player1Session.socketId,
+                  player1Session.userInfo,
+                  match.player2,
+                  player2Session.socketId,
+                  player2Session.userInfo,
+                  this.server,
+                );
+              })
+              .catch((err) => {
+                console.error('Failed to setup match:', err);
+              });
           });
         }
       }
