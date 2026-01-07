@@ -79,24 +79,26 @@ export class MatchGateway implements OnGatewayConnection, OnGatewayDisconnect {
           this.server.sockets.sockets.get(player1Session.socketId)?.join(match.roomId);
           this.server.sockets.sockets.get(player2Session.socketId)?.join(match.roomId);
 
-          this.server.to(player1Session.socketId).emit('match:found', {
-            opponent: player2Session.userInfo,
-          });
+          setImmediate(() => {
+            this.server.to(player1Session.socketId).emit('match:found', {
+              opponent: player2Session.userInfo,
+            });
 
-          this.server.to(player2Session.socketId).emit('match:found', {
-            opponent: player1Session.userInfo,
-          });
+            this.server.to(player2Session.socketId).emit('match:found', {
+              opponent: player1Session.userInfo,
+            });
 
-          this.matchService.startGame(
-            match.roomId,
-            match.player1,
-            player1Session.socketId,
-            player1Session.userInfo,
-            match.player2,
-            player2Session.socketId,
-            player2Session.userInfo,
-            this.server,
-          );
+            this.matchService.startGame(
+              match.roomId,
+              match.player1,
+              player1Session.socketId,
+              player1Session.userInfo,
+              match.player2,
+              player2Session.socketId,
+              player2Session.userInfo,
+              this.server,
+            );
+          });
         }
       }
 
