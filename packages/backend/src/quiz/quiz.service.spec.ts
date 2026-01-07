@@ -163,6 +163,28 @@ describe('QuizService', () => {
           }),
           isActive: true,
         },
+        {
+          id: 4,
+          difficulty: 2,
+          questionType: 'multiple' as const,
+          content: 'Q4',
+          correctAnswer: JSON.stringify({
+            options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+            answer: 'D',
+          }),
+          isActive: true,
+        },
+        {
+          id: 5,
+          difficulty: 4,
+          questionType: 'multiple' as const,
+          content: 'Q5',
+          correctAnswer: JSON.stringify({
+            options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+            answer: 'A',
+          }),
+          isActive: true,
+        },
       ];
 
       const mockQueryBuilder = {
@@ -191,6 +213,50 @@ describe('QuizService', () => {
           content: '서브쿼리란?',
           correctAnswer: '쿼리 안의 쿼리',
           difficulty: 3,
+          isActive: true,
+        },
+        {
+          id: 2,
+          questionType: 'multiple' as const,
+          content: 'Dummy Q2',
+          correctAnswer: JSON.stringify({
+            options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+            answer: 'A',
+          }),
+          difficulty: 2,
+          isActive: true,
+        },
+        {
+          id: 3,
+          questionType: 'multiple' as const,
+          content: 'Dummy Q3',
+          correctAnswer: JSON.stringify({
+            options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+            answer: 'B',
+          }),
+          difficulty: 2,
+          isActive: true,
+        },
+        {
+          id: 4,
+          questionType: 'multiple' as const,
+          content: 'Dummy Q4',
+          correctAnswer: JSON.stringify({
+            options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+            answer: 'C',
+          }),
+          difficulty: 2,
+          isActive: true,
+        },
+        {
+          id: 5,
+          questionType: 'multiple' as const,
+          content: 'Dummy Q5',
+          correctAnswer: JSON.stringify({
+            options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+            answer: 'D',
+          }),
+          difficulty: 2,
           isActive: true,
         },
       ];
@@ -223,6 +289,50 @@ describe('QuizService', () => {
           content: 'B+tree를 설명하세요',
           correctAnswer: 'B+tree는 균형 잡힌 트리 구조입니다.',
           difficulty: 5,
+          isActive: true,
+        },
+        {
+          id: 2,
+          questionType: 'multiple' as const,
+          content: 'Dummy Q2',
+          correctAnswer: JSON.stringify({
+            options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+            answer: 'A',
+          }),
+          difficulty: 2,
+          isActive: true,
+        },
+        {
+          id: 3,
+          questionType: 'multiple' as const,
+          content: 'Dummy Q3',
+          correctAnswer: JSON.stringify({
+            options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+            answer: 'B',
+          }),
+          difficulty: 2,
+          isActive: true,
+        },
+        {
+          id: 4,
+          questionType: 'multiple' as const,
+          content: 'Dummy Q4',
+          correctAnswer: JSON.stringify({
+            options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+            answer: 'C',
+          }),
+          difficulty: 2,
+          isActive: true,
+        },
+        {
+          id: 5,
+          questionType: 'multiple' as const,
+          content: 'Dummy Q5',
+          correctAnswer: JSON.stringify({
+            options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+            answer: 'D',
+          }),
+          difficulty: 2,
           isActive: true,
         },
       ];
@@ -258,6 +368,50 @@ describe('QuizService', () => {
             answer: 'A',
           }),
           difficulty: null,
+          isActive: true,
+        },
+        {
+          id: 2,
+          questionType: 'multiple' as const,
+          content: 'Dummy Q2',
+          correctAnswer: JSON.stringify({
+            options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+            answer: 'A',
+          }),
+          difficulty: 2,
+          isActive: true,
+        },
+        {
+          id: 3,
+          questionType: 'multiple' as const,
+          content: 'Dummy Q3',
+          correctAnswer: JSON.stringify({
+            options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+            answer: 'B',
+          }),
+          difficulty: 2,
+          isActive: true,
+        },
+        {
+          id: 4,
+          questionType: 'multiple' as const,
+          content: 'Dummy Q4',
+          correctAnswer: JSON.stringify({
+            options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+            answer: 'C',
+          }),
+          difficulty: 2,
+          isActive: true,
+        },
+        {
+          id: 5,
+          questionType: 'multiple' as const,
+          content: 'Dummy Q5',
+          correctAnswer: JSON.stringify({
+            options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+            answer: 'D',
+          }),
+          difficulty: 2,
           isActive: true,
         },
       ];
