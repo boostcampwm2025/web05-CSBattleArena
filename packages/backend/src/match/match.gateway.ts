@@ -12,7 +12,7 @@ import { MatchService } from './match.service';
 import { MatchSessionManager } from './match-session-manager';
 import { UserInfo } from './interfaces/user.interface';
 
-@WebSocketGateway({ cors: true })
+@WebSocketGateway({ namespace: '/ws', cors: true })
 export class MatchGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
@@ -77,33 +77,29 @@ export class MatchGateway implements OnGatewayConnection, OnGatewayDisconnect {
           this.sessionManager.addToRoom(match.roomId, match.player2);
 
           setImmediate(() => {
-            Promise.all([
-              this.server.sockets.sockets.get(player1Session.socketId)?.join(match.roomId),
-              this.server.sockets.sockets.get(player2Session.socketId)?.join(match.roomId),
-            ])
-              .then(() => {
-                this.server.to(player1Session.socketId).emit('match:found', {
-                  opponent: player2Session.userInfo,
-                });
+            // Socket.IO의 socketsJoin 메서드 사용
+            this.server
+              .in([player1Session.socketId, player2Session.socketId])
+              .socketsJoin(match.roomId);
 
-                this.server.to(player2Session.socketId).emit('match:found', {
-                  opponent: player1Session.userInfo,
-                });
+            this.server.to(player1Session.socketId).emit('match:found', {
+              opponent: player2Session.userInfo,
+            });
 
-                this.matchService.startGame(
-                  match.roomId,
-                  match.player1,
-                  player1Session.socketId,
-                  player1Session.userInfo,
-                  match.player2,
-                  player2Session.socketId,
-                  player2Session.userInfo,
-                  this.server,
-                );
-              })
-              .catch((err) => {
-                console.error('Failed to setup match:', err);
-              });
+            this.server.to(player2Session.socketId).emit('match:found', {
+              opponent: player1Session.userInfo,
+            });
+
+            this.matchService.startGame(
+              match.roomId,
+              match.player1,
+              player1Session.socketId,
+              player1Session.userInfo,
+              match.player2,
+              player2Session.socketId,
+              player2Session.userInfo,
+              this.server,
+            );
           });
         }
       }
