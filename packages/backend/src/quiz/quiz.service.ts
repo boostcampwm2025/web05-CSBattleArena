@@ -162,7 +162,6 @@ export class QuizService {
         type: 'multiple_choice',
         question: contentData.question,
         difficulty: this.mapDifficulty(entity.difficulty),
-        explanation: QUIZ_CONSTANTS.DEFAULT_EXPLANATION,
         options: contentData.options,
         answer: entity.correctAnswer,
       };
@@ -191,9 +190,7 @@ export class QuizService {
       type: 'short_answer',
       question: questionText,
       difficulty: this.mapDifficulty(entity.difficulty),
-      explanation: QUIZ_CONSTANTS.DEFAULT_EXPLANATION,
       answer: entity.correctAnswer,
-      keywords: QUIZ_CONSTANTS.DEFAULT_KEYWORDS,
     };
   }
 
@@ -213,9 +210,7 @@ export class QuizService {
       type: 'essay',
       question: questionText,
       difficulty: this.mapDifficulty(entity.difficulty),
-      explanation: QUIZ_CONSTANTS.DEFAULT_EXPLANATION,
       sampleAnswer: entity.correctAnswer,
-      keywords: QUIZ_CONSTANTS.DEFAULT_KEYWORDS,
     };
   }
 

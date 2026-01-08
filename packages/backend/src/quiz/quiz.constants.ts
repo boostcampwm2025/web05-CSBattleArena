@@ -4,12 +4,6 @@
 export const QUIZ_CONSTANTS = {
   /** 게임 시작에 필요한 최소 질문 개수 */
   REQUIRED_QUESTION_COUNT: 5,
-
-  /** DB에 explanation 필드가 없으므로 사용하는 기본값 */
-  DEFAULT_EXPLANATION: '',
-
-  /** DB에 keywords 필드가 없으므로 사용하는 기본값 */
-  DEFAULT_KEYWORDS: [] as string[],
 } as const;
 
 /**
