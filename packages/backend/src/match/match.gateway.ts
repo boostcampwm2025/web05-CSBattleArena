@@ -145,19 +145,19 @@ export class MatchGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: SubmitAnswerRequest,
   ): Promise<SubmitAnswerResponse> {
+    const userId = this.sessionManager.getUserId(client.id);
+
+    if (!userId) {
+      return { ok: false, error: 'User not found' };
+    }
+
+    const roomId = this.sessionManager.getRoomBySocketId(client.id);
+
+    if (!roomId) {
+      return { ok: false, error: 'Room not found' };
+    }
+
     try {
-      const userId = this.sessionManager.getUserId(client.id);
-
-      if (!userId) {
-        return { ok: false, error: 'User not found' };
-      }
-
-      const roomId = this.sessionManager.getRoomBySocketId(client.id);
-
-      if (!roomId) {
-        return { ok: false, error: 'Room not found' };
-      }
-
       await this.matchService.submitAnswer(roomId, userId, data.answer);
 
       const gameSession = this.sessionManager.getGameSession(roomId);
