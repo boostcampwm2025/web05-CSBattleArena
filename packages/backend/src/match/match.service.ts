@@ -13,7 +13,7 @@ import {
   RoundResult,
   Submission,
 } from '../quiz/quiz.types';
-import { SCORE_MAP } from '../quiz/quiz.constants';
+import { SCORE_MAP, SPEED_BONUS } from '../quiz/quiz.constants';
 
 @Injectable()
 export class MatchService {
@@ -119,11 +119,35 @@ export class MatchService {
       gradeResults = await this.aiService.gradeSubjectiveQuestion(question, submissions);
     }
 
+    // 제출 시간 기반 보너스 계산 - 정답자 중 가장 빠른 사람 찾기
+    const correctSubmissions = gradeResults
+      .filter((grade) => grade.isCorrect)
+      .map((grade) => ({
+        playerId: grade.playerId,
+        submittedAt: submissions.find((sub) => sub.playerId === grade.playerId).submittedAt,
+      }));
+
+    const fastestCorrectSubmission =
+      correctSubmissions.length > 0
+        ? correctSubmissions.reduce((fastest, current) =>
+            current.submittedAt < fastest.submittedAt ? current : fastest,
+          )
+        : null;
+
     // 점수 반영
     const finalGrades = gradeResults.map((grade) => {
-      const score = grade.isCorrect ? SCORE_MAP[question.difficulty] : 0;
+      let score = grade.isCorrect ? SCORE_MAP[question.difficulty] : 0;
 
-      if (grade.isCorrect) {
+      // 정답이면서 정답자 중 가장 빨리 제출한 경우 보너스 점수 추가
+      if (
+        grade.isCorrect &&
+        fastestCorrectSubmission &&
+        grade.playerId === fastestCorrectSubmission.playerId
+      ) {
+        score += SPEED_BONUS;
+      }
+
+      if (score > 0) {
         this.sessionManager.addScore(roomId, grade.playerId, score);
       }
 
