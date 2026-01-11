@@ -39,11 +39,11 @@ describe('QuizAiService 통합 테스트 (실제 AI 채점)', () => {
 
         // 다양한 답변 케이스 준비
         const submissions: Submission[] = [
-            { playerId: 'user_correct_1', answer: '정답은 80번입니다.' },       // 정답 (문장형)
-            { playerId: 'user_correct_2', answer: '80' },                      // 정답 (단답형)
-            { playerId: 'user_typo', answer: '80번 포트요' },                  // 정답 (유사)
-            { playerId: 'user_wrong_1', answer: '443번입니다.' },             // 오답 (HTTPS)
-            { playerId: 'user_wrong_2', answer: '잘 모르겠습니다.' },            // 오답 (회피)
+            { playerId: 'user_correct_1', answer: '정답은 80번입니다.', submittedAt: 1000 },       // 정답 (문장형)
+            { playerId: 'user_correct_2', answer: '80', submittedAt: 2000 },                      // 정답 (단답형)
+            { playerId: 'user_typo', answer: '80번 포트요', submittedAt: 3000 },                  // 정답 (유사)
+            { playerId: 'user_wrong_1', answer: '443번입니다.', submittedAt: 4000 },             // 오답 (HTTPS)
+            { playerId: 'user_wrong_2', answer: '잘 모르겠습니다.', submittedAt: 5000 },            // 오답 (회피)
         ];
 
         console.log('🚀 Clova AI에게 채점 요청 중... (시간이 걸릴 수 있습니다)');
