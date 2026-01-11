@@ -5,3 +5,5 @@ export const SCORE_MAP: Record<Difficulty, number> = {
   medium: 20,
   hard: 30,
 };
+
+export const SPEED_BONUS = 5;
