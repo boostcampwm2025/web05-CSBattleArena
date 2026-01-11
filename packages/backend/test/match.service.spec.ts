@@ -8,7 +8,7 @@ import {
     RoundData,
     ShortAnswerQuestion,
 } from '../src/quiz/quiz.types';
-import { SCORE_MAP } from '../src/quiz/quiz.constants';
+import { SCORE_MAP, SPEED_BONUS } from '../src/quiz/quiz.constants';
 
 const mockUuid = 'user-uuid-123';
 const mockRoomId = 'room-123';
@@ -147,8 +147,8 @@ describe('MatchService', () => {
             mockSessionManager.getGradingInput.mockReturnValue({
                 question: mockQuestion,
                 submissions: [
-                    { playerId: mockP1, answer: 'A' }, // 정답
-                    { playerId: mockP2, answer: 'B' }, // 오답
+                    { playerId: mockP1, answer: 'A', submittedAt: 1000 }, // 정답
+                    { playerId: mockP2, answer: 'B', submittedAt: 2000 }, // 오답
                 ],
             });
             mockSessionManager.getGameSession.mockReturnValue(mockSession);
@@ -160,11 +160,11 @@ describe('MatchService', () => {
             // 1. 객관식은 로컬 채점이므로 AI 호출 안함
             expect(aiService.gradeSubjectiveQuestion).not.toHaveBeenCalled();
 
-            // 2. 점수 부여 확인 (P1은 정답이므로 medium 점수 부여)
+            // 2. 점수 부여 확인 (P1은 정답이므로 medium 점수 + 스피드 보너스)
             expect(sessionManager.addScore).toHaveBeenCalledWith(
                 mockRoomId,
                 mockP1,
-                SCORE_MAP['medium'],
+                SCORE_MAP['medium'] + SPEED_BONUS,
             );
             // P2는 오답이므로 호출 안됨 (또는 0점 로직에 따라 다름, 현재 코드는 if(isCorrect)일때만 호출)
             expect(sessionManager.addScore).toHaveBeenCalledTimes(1);
@@ -190,7 +190,7 @@ describe('MatchService', () => {
             mockSessionManager.isAllSubmitted.mockReturnValue(true);
             mockSessionManager.getGradingInput.mockReturnValue({
                 question: shortQuestion,
-                submissions: [{ playerId: mockP1, answer: 'Gemini' }],
+                submissions: [{ playerId: mockP1, answer: 'Gemini', submittedAt: 1000 }],
             });
             mockSessionManager.getGameSession.mockReturnValue(mockSession);
 
@@ -213,8 +213,64 @@ describe('MatchService', () => {
             expect(sessionManager.addScore).toHaveBeenCalledWith(
                 mockRoomId,
                 mockP1,
-                SCORE_MAP['hard'],
+                SCORE_MAP['hard'] + SPEED_BONUS,
             );
+        });
+
+        it('더 빨리 제출한 플레이어에게 스피드 보너스를 부여해야 한다', async () => {
+            // Setup: 두 플레이어 모두 정답이지만 P1이 먼저 제출
+            mockSessionManager.isAllSubmitted.mockReturnValue(true);
+            mockSessionManager.getGradingInput.mockReturnValue({
+                question: mockQuestion,
+                submissions: [
+                    { playerId: mockP1, answer: 'A', submittedAt: 1000 }, // 먼저 제출
+                    { playerId: mockP2, answer: 'A', submittedAt: 2000 }, // 나중에 제출
+                ],
+            });
+            mockSessionManager.getGameSession.mockReturnValue(mockSession);
+
+            // Execute
+            const result: any = await service.submitAnswer(mockRoomId, mockP1, 'A');
+
+            // Verify: P1은 정답 + 스피드 보너스, P2는 정답만
+            expect(sessionManager.addScore).toHaveBeenCalledWith(
+                mockRoomId,
+                mockP1,
+                SCORE_MAP['medium'] + SPEED_BONUS,
+            );
+            expect(sessionManager.addScore).toHaveBeenCalledWith(
+                mockRoomId,
+                mockP2,
+                SCORE_MAP['medium'],
+            );
+            expect(result.grades[0].score).toBe(SCORE_MAP['medium'] + SPEED_BONUS);
+            expect(result.grades[1].score).toBe(SCORE_MAP['medium']);
+        });
+
+        it('오답자는 더 빨리 제출해도 보너스를 받지 못한다', async () => {
+            // Setup: P1이 먼저 제출했지만 오답
+            mockSessionManager.isAllSubmitted.mockReturnValue(true);
+            mockSessionManager.getGradingInput.mockReturnValue({
+                question: mockQuestion,
+                submissions: [
+                    { playerId: mockP1, answer: 'B', submittedAt: 1000 }, // 먼저 제출했지만 오답
+                    { playerId: mockP2, answer: 'A', submittedAt: 2000 }, // 나중에 제출했지만 정답
+                ],
+            });
+            mockSessionManager.getGameSession.mockReturnValue(mockSession);
+
+            // Execute
+            const result: any = await service.submitAnswer(mockRoomId, mockP1, 'B');
+
+            // Verify: P2만 스피드 보너스 받음 (정답자 중 가장 빨리 제출)
+            expect(sessionManager.addScore).toHaveBeenCalledTimes(1);
+            expect(sessionManager.addScore).toHaveBeenCalledWith(
+                mockRoomId,
+                mockP2,
+                SCORE_MAP['medium'] + SPEED_BONUS,
+            );
+            expect(result.grades[0].score).toBe(0);
+            expect(result.grades[1].score).toBe(SCORE_MAP['medium'] + SPEED_BONUS);
         });
     });
 
@@ -240,7 +296,10 @@ describe('MatchService', () => {
             mockSessionManager.isAllSubmitted.mockReturnValue(true);
             mockSessionManager.getGradingInput.mockReturnValue({
                 question: mockQuestion,
-                submissions: [],
+                submissions: [
+                    { playerId: mockP1, answer: 'A', submittedAt: 1000 },
+                    { playerId: mockP2, answer: 'A', submittedAt: 2000 },
+                ],
             });
         });
 
