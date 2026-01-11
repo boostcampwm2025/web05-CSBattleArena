@@ -241,6 +241,7 @@ export class MatchSessionManager {
     const submission: Submission = {
       playerId,
       answer,
+      submittedAt: Date.now(),
     };
 
     round.submissions[playerId] = submission;
