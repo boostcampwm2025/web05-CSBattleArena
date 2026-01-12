@@ -6,6 +6,9 @@ import { QuizModule } from './quiz/quiz.module';
 import { HealthController } from './health/health.controller';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { FeedbackModule } from './feedback/feedback.module';
+import { feedbackLoggerConfig } from './common/winston.config';
+import { WinstonModule } from 'nest-winston';
 
 const configModule = ConfigModule.forRoot({
   isGlobal: true,
@@ -32,7 +35,14 @@ const typeOrmModule = TypeOrmModule.forRootAsync({
 });
 
 const metadata: ModuleMetadata = {
-  imports: [configModule, typeOrmModule, QuizModule, MatchModule] as const,
+  imports: [
+    configModule,
+    typeOrmModule,
+    WinstonModule.forRoot(feedbackLoggerConfig),
+    QuizModule,
+    MatchModule,
+    FeedbackModule,
+  ],
   controllers: [AppController, HealthController],
   providers: [AppService],
 };
