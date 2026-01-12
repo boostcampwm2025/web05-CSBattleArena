@@ -360,6 +360,7 @@ export class QuizService {
     return {
       type: 'object',
       properties: {
+        roundNumber: { type: 'number' },
         grades: {
           type: 'array',
           items: {
@@ -379,6 +380,7 @@ export class QuizService {
           },
         },
       },
+      required: ['roundNumber', 'grades'],
     };
   }
 }
