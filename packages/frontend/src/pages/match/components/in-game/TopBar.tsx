@@ -40,7 +40,7 @@ export default function TopBar() {
           </div>
           <div className="text-base font-bold text-amber-400" style={{ fontFamily: 'Orbitron' }}>
             {roundState === 'preparing' && `STARTING IN ${remainedSec}s...`}
-            {roundState === 'playing' && `TIME: ${remainedSec}s`};
+            {roundState === 'playing' && `TIME: ${remainedSec}s`}
             {roundState === 'round-result' && `NEXT ROUND IN ${remainedSec}s...`}
           </div>
         </div>
