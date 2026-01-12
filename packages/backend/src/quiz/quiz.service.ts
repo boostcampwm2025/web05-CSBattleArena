@@ -116,6 +116,9 @@ export class QuizService {
   ): Promise<QuestionEntity[]> {
     return await this.questionRepository
       .createQueryBuilder('q')
+      .leftJoinAndSelect('q.categoryQuestions', 'cq')
+      .leftJoinAndSelect('cq.category', 'c')
+      .leftJoinAndSelect('c.parent', 'parent')
       .where('q.isActive = :isActive', { isActive: true })
       .andWhere('q.difficulty BETWEEN :min AND :max', { min: minDifficulty, max: maxDifficulty })
       .andWhere('q.questionType = :type', { type })
@@ -163,6 +166,7 @@ export class QuizService {
         type: 'multiple_choice',
         question: contentData.question,
         difficulty: this.mapDifficulty(entity.difficulty),
+        category: this.extractCategory(entity),
         options: contentData.options,
         answer: entity.correctAnswer,
       };
@@ -192,6 +196,7 @@ export class QuizService {
       type: 'short_answer',
       question: questionText,
       difficulty: this.mapDifficulty(entity.difficulty),
+      category: this.extractCategory(entity),
       answer: entity.correctAnswer,
     };
   }
@@ -213,6 +218,7 @@ export class QuizService {
       type: 'essay',
       question: questionText,
       difficulty: this.mapDifficulty(entity.difficulty),
+      category: this.extractCategory(entity),
       sampleAnswer: entity.correctAnswer,
     };
   }
@@ -302,6 +308,31 @@ export class QuizService {
     }
 
     return 'hard';
+  }
+
+  /**
+   * 카테고리 추출 (categoryQuestions에서 첫 번째 카테고리 사용)
+   * @returns [대주제, 소주제] 형태의 배열
+   */
+  private extractCategory(entity: QuestionEntity): string[] | undefined {
+    if (!entity.categoryQuestions || entity.categoryQuestions.length === 0) {
+      return undefined;
+    }
+
+    const categoryQuestion = entity.categoryQuestions[0];
+    const category = categoryQuestion.category;
+
+    if (!category) {
+      return undefined;
+    }
+
+    // 소주제 (현재 카테고리)
+    const subCategory = category.name || '기타';
+
+    // 대주제 (부모 카테고리)
+    const mainCategory = category.parent?.name || '일반';
+
+    return [mainCategory, subCategory];
   }
 
   /**

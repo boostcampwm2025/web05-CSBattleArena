@@ -76,19 +76,35 @@ export class RoundProgressionService {
         throw new Error(`Question not found for room ${roomId}`);
       }
 
-      // TODO: Phase 5에서 Question 변환 로직 구현
       const difficulty = question.difficulty as Difficulty;
       const questionDuration = ROUND_DURATIONS.QUESTION[difficulty];
 
-      // round:start 이벤트 발송 (임시로 간단한 형식)
+      // round:start 이벤트 발송
       const startedAt = Date.now();
+
+      // content 구성 (question type에 따라 다름)
+      const content: { question: string; option?: string[] } = {
+        question: question.question,
+      };
+
+      // 객관식인 경우 option 추가
+      if (question.type === 'multiple_choice') {
+        content.option = [
+          question.options.A,
+          question.options.B,
+          question.options.C,
+          question.options.D,
+        ];
+      }
+
       this.server.to(roomId).emit('round:start', {
         startedAt,
         durationSec: questionDuration,
         question: {
-          category: ['CS', 'General'],
+          category: question.category || ['일반', '기타'],
           difficulty: question.difficulty,
-          content: { type: question.type, question: question.question },
+          type: question.type,
+          content,
         },
       });
 
