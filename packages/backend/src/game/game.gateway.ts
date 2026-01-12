@@ -29,6 +29,11 @@ export class GameGateway implements OnGatewayDisconnect, OnGatewayInit {
     private readonly roundTimer: RoundTimer,
   ) {}
 
+  afterInit(server: Server): void {
+    // RoundProgressionService에 server 설정
+    this.roundProgression.setServer(server);
+  }
+
   @SubscribeMessage('submit:answer')
   async handleSubmitAnswer(
     @ConnectedSocket() client: Socket,

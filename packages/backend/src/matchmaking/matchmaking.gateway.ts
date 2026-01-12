@@ -26,11 +26,6 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
     private readonly roundProgression: RoundProgressionService,
   ) {}
 
-  afterInit(server: Server): void {
-    // RoundProgressionService에 server 설정
-    this.roundProgression.setServer(server);
-  }
-
   handleConnection(client: Socket): void {
     const query = client.handshake.query;
 
