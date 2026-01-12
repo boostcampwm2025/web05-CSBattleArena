@@ -1,23 +1,28 @@
-import { MatchService } from '../src/match/match.service';
-import { MatchSessionManager } from '../src/match/match-session-manager';
+import { GameService } from '../src/game/game.service';
+import { GameSessionManager } from '../src/game/game-session-manager';
 import { QuizService } from '../src/quiz/quiz.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import {
     MultipleChoiceQuestion,
     ShortAnswerQuestion,
     Question,
 } from '../src/quiz/quiz.types';
-import { RoundData } from '../src/match/interfaces/match.interfaces';
+import { RoundData } from '../src/game/interfaces/game.interfaces';
 import { SCORE_MAP, SPEED_BONUS } from '../src/quiz/quiz.constants';
+import { Match } from '../src/match/entity/match.entity';
+import { Round } from '../src/match/entity/round.entity';
+import { RoundAnswer } from '../src/match/entity/round-answer.entity';
 
 const mockUuid = 'user-uuid-123';
 const mockRoomId = 'room-123';
 const mockP1 = 'player-1';
 const mockP2 = 'player-2';
 
-describe('MatchService', () => {
-    let service: MatchService;
-    let sessionManager: MatchSessionManager;
+describe('GameService', () => {
+    let service: GameService;
+    let sessionManager: GameSessionManager;
     let aiService: QuizService;
 
     // Mock Objects
@@ -43,41 +48,44 @@ describe('MatchService', () => {
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
             providers: [
-                MatchService,
-                { provide: MatchSessionManager, useValue: mockSessionManager },
+                GameService,
+                { provide: GameSessionManager, useValue: mockSessionManager },
                 { provide: QuizService, useValue: mockAiService },
+                { provide: getRepositoryToken(Match), useValue: {} },
+                { provide: getRepositoryToken(Round), useValue: {} },
+                { provide: getRepositoryToken(RoundAnswer), useValue: {} },
+                {
+                    provide: DataSource,
+                    useValue: {
+                        transaction: jest.fn().mockImplementation(async (cb) => cb({
+                            create: jest.fn().mockReturnValue({}),
+                            save: jest.fn().mockResolvedValue({})
+                        }))
+                    }
+                },
             ],
         }).compile();
 
-        service = module.get<MatchService>(MatchService);
-        sessionManager = module.get<MatchSessionManager>(MatchSessionManager);
+        service = module.get<GameService>(GameService);
+        sessionManager = module.get<GameSessionManager>(GameSessionManager);
         aiService = module.get<QuizService>(QuizService);
 
         // Reset mocks
         jest.clearAllMocks();
     });
 
-    describe('대기열 관리 (Queue Management)', () => {
+    // 대기열 관리는 MatchmakingService로 이동되었으므로 스킵
+    describe.skip('대기열 관리 (Queue Management) - MOVED TO MatchmakingService', () => {
         it('유저를 대기열에 추가하고 매칭 상대가 없으면 null을 반환해야 한다', () => {
-            const match = service.addToQueue('user1', {} as any);
-            expect(match).toBeNull();
-            expect(service.getQueueSize()).toBe(1);
+            // Moved to MatchmakingService
         });
 
         it('두 유저를 매칭시키고 매치 정보를 반환해야 한다', () => {
-            service.addToQueue('user1', {} as any);
-            const match = service.addToQueue('user2', {} as any);
-
-            expect(match).toBeDefined();
-            expect(match.player1).toBe('user1');
-            expect(match.player2).toBe('user2');
-            expect(service.getQueueSize()).toBe(0);
+            // Moved to MatchmakingService
         });
 
         it('대기열에서 유저를 제거해야 한다', () => {
-            service.addToQueue('user1', {} as any);
-            service.removeFromQueue('user1');
-            expect(service.getQueueSize()).toBe(0);
+            // Moved to MatchmakingService
         });
     });
 

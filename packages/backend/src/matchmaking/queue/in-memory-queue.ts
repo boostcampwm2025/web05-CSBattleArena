@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { IMatchQueue, Match } from '../interfaces/match-queue.interface';
+import { IMatchQueue, Match } from '../interfaces/matchmaking.interface';
 import { randomUUID } from 'crypto';
 
 @Injectable()

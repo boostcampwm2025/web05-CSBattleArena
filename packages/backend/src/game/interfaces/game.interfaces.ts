@@ -18,9 +18,12 @@ export interface GameSession {
   currentRound: number;
   totalRounds: number;
   rounds: Map<number, RoundData>;
+  currentPhase: 'ready' | 'question' | 'grading' | 'review' | 'finished';
+  currentPhaseStartTime: number;
 }
 
 export type RoundStatus = 'waiting' | 'in_progress' | 'completed';
+export type RoundPhase = 'ready' | 'question' | 'grading' | 'review' | 'finished';
 
 export interface Submission {
   playerId: string;
@@ -32,6 +35,7 @@ export interface RoundData {
   roundNumber: number;
   status: RoundStatus;
   question: Question | null;
+  questionId: number | null; // DB에서 조회한 question의 ID
   submissions: {
     [playerId: string]: Submission | null;
   };
@@ -53,6 +57,13 @@ export interface GradeResult {
 export interface RoundResult {
   roundNumber: number;
   grades: GradeResult[];
+  finalResult?: FinalResult;
+}
+
+export interface FinalResult {
+  winnerId: string | null;
+  scores: Record<string, number>;
+  isDraw: boolean;
 }
 
 export interface GradingInput {
@@ -63,6 +74,63 @@ export interface GradingInput {
 // ============================================
 // WebSocket Event Payloads
 // ============================================
+
+// round:ready
+export interface RoundReadyEvent {
+  startedAt: number;
+  durationSec: number;
+  roundIndex: number;
+  totalRounds: number;
+}
+
+// round:start
+export interface RoundStartEvent {
+  startedAt: number;
+  durationSec: number;
+  question: {
+    category: string[];
+    difficulty: string;
+    content:
+      | { type: 'multiple'; question: string; option: string[] }
+      | { type: 'short'; question: string }
+      | { type: 'essay'; question: string };
+  };
+}
+
+// round:end
+export interface RoundEndEvent {
+  startedAt: number;
+  durationSec: number;
+  results: {
+    my: PlayerRoundResult;
+    opponent: PlayerRoundResult;
+  };
+  solution: {
+    bestAnswer: string;
+    explanation: string;
+  };
+}
+
+export interface PlayerRoundResult {
+  submitted: string;
+  delta: number;
+  total: number;
+  correct: boolean;
+}
+
+// round:tick
+export interface RoundTickEvent {
+  remainedSec: number;
+}
+
+// match:end
+export interface MatchEndEvent {
+  isWin: boolean;
+  finalScores: {
+    my: number;
+    opponent: number;
+  };
+}
 
 // submit:answer
 export interface SubmitAnswerRequest {

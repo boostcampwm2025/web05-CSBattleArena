@@ -1,4 +1,5 @@
 interface BaseQuestion {
+  id?: number; // DB entity ID (optional for compatibility)
   type: QuestionType;
   difficulty: Difficulty;
   question: string;

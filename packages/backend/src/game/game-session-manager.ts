@@ -1,18 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { QueueSession } from './queues/queue.session';
+import { QueueSession } from '../matchmaking/queue/queue.session';
 import { UserInfo } from './interfaces/user.interface';
 import { Question } from '../quiz/quiz.types';
 import {
   GameSession,
   GradingInput,
   RoundData,
+  RoundPhase,
   RoundResult,
   Submission,
-} from './interfaces/match.interfaces';
+} from './interfaces/game.interfaces';
 
 @Injectable()
-export class MatchSessionManager {
+export class GameSessionManager {
   private socketToUser = new Map<string, string>();
   private userToSocket = new Map<string, string>();
   private queueSessions = new Map<string, QueueSession>();
@@ -163,6 +164,8 @@ export class MatchSessionManager {
       currentRound: 0,
       totalRounds,
       rounds: new Map(),
+      currentPhase: 'ready',
+      currentPhaseStartTime: Date.now(),
     };
 
     this.gameSessions.set(roomId, session);
@@ -190,6 +193,7 @@ export class MatchSessionManager {
       roundNumber: nextRoundNumber,
       status: 'waiting',
       question: null,
+      questionId: null,
       submissions: {
         [session.player1Id]: null,
         [session.player2Id]: null,
@@ -212,6 +216,7 @@ export class MatchSessionManager {
     }
 
     round.question = question;
+    round.questionId = question.id ?? null;
     round.status = 'in_progress';
   }
 
@@ -345,5 +350,28 @@ export class MatchSessionManager {
       player1Score: session.player1Score,
       player2Score: session.player2Score,
     };
+  }
+
+  // ============================================
+  // Phase 관리 함수
+  // ============================================
+
+  setPhase(roomId: string, phase: RoundPhase): void {
+    const session = this.getGameSessionOrThrow(roomId);
+    session.currentPhase = phase;
+    session.currentPhaseStartTime = Date.now();
+  }
+
+  getPhase(roomId: string): RoundPhase {
+    const session = this.getGameSessionOrThrow(roomId);
+
+    return session.currentPhase;
+  }
+
+  hasPlayerSubmitted(roomId: string, playerId: string): boolean {
+    const session = this.getGameSessionOrThrow(roomId);
+    const round = this.getCurrentRoundOrThrow(session);
+
+    return round.submissions[playerId] !== null;
   }
 }

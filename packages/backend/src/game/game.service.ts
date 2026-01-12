@@ -1,51 +1,28 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Server } from 'socket.io';
-import { IMatchQueue, Match } from './interfaces/match-queue.interface';
-import { InMemoryMatchQueue } from './queues/in-memory-queue';
-import { MatchSessionManager } from './match-session-manager';
+import { GameSessionManager } from './game-session-manager';
 import { QuizService } from '../quiz/quiz.service';
 import { UserInfo } from './interfaces/user.interface';
-import { RoundData } from './interfaces/match.interfaces';
-import {
-  FinalResult,
-  GradeResult,
-  MultipleChoiceQuestion,
-  RoundResult,
-  Submission,
-} from '../quiz/quiz.types';
+import { FinalResult, RoundData } from './interfaces/game.interfaces';
+import { GradeResult, MultipleChoiceQuestion, RoundResult, Submission } from '../quiz/quiz.types';
 import { SCORE_MAP, SPEED_BONUS } from '../quiz/quiz.constants';
+import { Match, Round, RoundAnswer } from '../match/entity';
 
 @Injectable()
-export class MatchService {
-  private matchQueue: IMatchQueue;
-  private userToSessionId = new Map<string, string>();
-
+export class GameService {
   constructor(
-    private readonly sessionManager: MatchSessionManager,
+    @InjectRepository(Match)
+    private readonly matchRepo: Repository<Match>,
+    @InjectRepository(Round)
+    private readonly roundRepo: Repository<Round>,
+    @InjectRepository(RoundAnswer)
+    private readonly answerRepo: Repository<RoundAnswer>,
+    private readonly connection: DataSource,
+    private readonly sessionManager: GameSessionManager,
     private readonly aiService: QuizService,
-  ) {
-    this.matchQueue = new InMemoryMatchQueue();
-  }
-
-  addToQueue(userId: string, _userInfo: UserInfo): Match | null {
-    const sessionId = `session-${userId}-${Date.now()}`;
-    this.userToSessionId.set(userId, sessionId);
-
-    return this.matchQueue.add(userId);
-  }
-
-  removeFromQueue(userId: string): void {
-    this.matchQueue.remove(userId);
-    this.userToSessionId.delete(userId);
-  }
-
-  getQueueSize(): number {
-    return this.matchQueue.getQueueSize();
-  }
-
-  getSessionId(userId: string): string | undefined {
-    return this.userToSessionId.get(userId);
-  }
+  ) {}
 
   startGame(
     roomId: string,
@@ -73,7 +50,7 @@ export class MatchService {
   }
 
   // ============================================
-  // Game Logic (from GameService)
+  // Game Logic
   // ============================================
 
   /**
@@ -108,7 +85,7 @@ export class MatchService {
   /**
    * 채점 및 결과 처리 프로세스
    */
-  private async processGrading(roomId: string): Promise<RoundResult> {
+  async processGrading(roomId: string): Promise<RoundResult> {
     const { question, submissions } = this.sessionManager.getGradingInput(roomId);
 
     let gradeResults: GradeResult[];
@@ -178,7 +155,7 @@ export class MatchService {
   /**
    * 최종 승자 계산 로직
    */
-  private calculateFinalResult(roomId: string): FinalResult {
+  calculateFinalResult(roomId: string): FinalResult {
     const session = this.sessionManager.getGameSession(roomId);
 
     if (!session) {
@@ -230,5 +207,64 @@ export class MatchService {
         feedback: isCorrect ? 'Correct!' : `Wrong. The answer was ${question.answer}.`,
       };
     });
+  }
+
+  /**
+   * 매치 종료 시 데이터베이스에 저장
+   */
+  async saveMatchToDatabase(roomId: string): Promise<void> {
+    const session = this.sessionManager.getGameSession(roomId);
+    const finalResult = this.calculateFinalResult(roomId);
+
+    await this.connection.transaction(async (manager) => {
+      // 1. Match 엔티티 생성
+      const match = manager.create(Match, {
+        player1Id: this.parseUserId(session.player1Id),
+        player2Id: this.parseUserId(session.player2Id),
+        winnerId: finalResult.winnerId ? this.parseUserId(finalResult.winnerId) : null,
+        matchType: 'multi',
+      });
+      const savedMatch = await manager.save(match);
+
+      // 2. 모든 Round 및 RoundAnswer 저장
+      for (const [roundNum, roundData] of session.rounds.entries()) {
+        const round = manager.create(Round, {
+          matchId: savedMatch.id,
+          questionId: roundData.questionId,
+          roundNumber: roundNum,
+        });
+        const savedRound = await manager.save(round);
+
+        // 3. 각 플레이어의 RoundAnswer 저장
+        for (const [playerId, submission] of Object.entries(roundData.submissions)) {
+          if (!submission) {
+            continue;
+          }
+
+          const grade = roundData.result.grades.find((g) => g.playerId === playerId);
+
+          const roundAnswer = manager.create(RoundAnswer, {
+            userId: this.parseUserId(playerId),
+            roundId: savedRound.id,
+            userAnswer: submission.answer || '',
+            score: grade.score,
+            answerStatus: grade.isCorrect ? 'correct' : 'incorrect',
+            aiFeedback: grade.feedback,
+          });
+          await manager.save(roundAnswer);
+        }
+      }
+    });
+  }
+
+  private parseUserId(userId: string): number {
+    const parsed = parseInt(userId, 10);
+
+    if (isNaN(parsed)) {
+      // userId가 숫자가 아니면 임시로 0 반환 (실제 환경에서는 적절히 처리)
+      return 0;
+    }
+
+    return parsed;
   }
 }

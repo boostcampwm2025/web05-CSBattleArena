@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { io, Socket } from 'socket.io-client';
-import { MatchModule } from '../src/match/match.module';
+import { GameModule } from '../src/game/game.module';
 import { QuizModule } from '../src/quiz/quiz.module';
 import { ConfigModule } from '@nestjs/config';
 
@@ -18,7 +18,7 @@ describe('Match Gateway Integration (e2e)', () => {
           isGlobal: true,
         }),
         QuizModule,
-        MatchModule,
+        GameModule,
       ],
     }).compile();
 

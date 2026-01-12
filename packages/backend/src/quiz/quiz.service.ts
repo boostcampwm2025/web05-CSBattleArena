@@ -159,6 +159,7 @@ export class QuizService {
       }
 
       return {
+        id: entity.id,
         type: 'multiple_choice',
         question: contentData.question,
         difficulty: this.mapDifficulty(entity.difficulty),
@@ -187,6 +188,7 @@ export class QuizService {
     const questionText = this.extractQuestionText(entity.content);
 
     return {
+      id: entity.id,
       type: 'short_answer',
       question: questionText,
       difficulty: this.mapDifficulty(entity.difficulty),
@@ -207,6 +209,7 @@ export class QuizService {
     const questionText = this.extractQuestionText(entity.content);
 
     return {
+      id: entity.id,
       type: 'essay',
       question: questionText,
       difficulty: this.mapDifficulty(entity.difficulty),

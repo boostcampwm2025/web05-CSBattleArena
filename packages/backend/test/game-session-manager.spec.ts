@@ -1,9 +1,9 @@
-import { MatchSessionManager } from '../src/match/match-session-manager';
-import { UserInfo } from '../src/match/interfaces/user.interface';
+import { GameSessionManager } from '../src/game/game-session-manager';
+import { UserInfo } from '../src/game/interfaces/user.interface';
 import { Question } from '../src/quiz/quiz.types';
 
-describe('MatchSessionManager - Game Session Management', () => {
-  let sessionManager: MatchSessionManager;
+describe('GameSessionManager - Game Session Management', () => {
+  let sessionManager: GameSessionManager;
 
   const mockUserInfo1: UserInfo = {
     nickname: 'Player1',
@@ -31,7 +31,7 @@ describe('MatchSessionManager - Game Session Management', () => {
   };
 
   beforeEach(() => {
-    sessionManager = new MatchSessionManager();
+    sessionManager = new GameSessionManager();
   });
 
   describe('createGameSession', () => {
