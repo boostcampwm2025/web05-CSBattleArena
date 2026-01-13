@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getSocket } from '@/lib/socket';
 import { RoundEnd, RoundReady, RoundStart, RoundTick } from '@/lib/socket/event';
 
+import { useMatch } from './useMatch';
+
 type RoundState = 'preparing' | 'playing' | 'round-result';
 type QuestionContent =
   | { type: 'multiple'; question: string; option: string[] }
@@ -65,6 +67,8 @@ export function RoundProvider({ children }: { children: React.ReactNode }) {
   const [bestAnswer, setBestAnswer] = useState<string>('');
   const [explanation, setExplanation] = useState<string>('');
 
+  const { setMatchResult } = useMatch();
+
   const socketRef = useRef(getSocket());
 
   const handleRoundReady = useCallback((payload: RoundReady) => {
@@ -84,21 +88,47 @@ export function RoundProvider({ children }: { children: React.ReactNode }) {
     setContent(payload.question.content);
   }, []);
 
-  const handleRoundEnd = useCallback((payload: RoundEnd) => {
-    setRoundState('round-result');
-    setEndTime(payload.startedAt + payload.durationSec);
-    setRemainedSec(payload.durationSec);
-    setMyAnswer(payload.result.my.submitted);
-    setMyDelta(payload.result.my.delta);
-    setMyTotal(payload.result.my.total);
-    setMyIsCorrect(payload.result.my.correct);
-    setOpponentAnswer(payload.result.opponent.submitted);
-    setOpponentDelta(payload.result.opponent.delta);
-    setOpponentTotal(payload.result.opponent.total);
-    setOpponentIsCorrect(payload.result.opponent.correct);
-    setBestAnswer(payload.solution.bestAnswer);
-    setExplanation(payload.solution.explanation);
-  }, []);
+  const handleRoundEnd = useCallback(
+    (payload: RoundEnd) => {
+      setRoundState('round-result');
+      setEndTime(payload.startedAt + payload.durationSec);
+      setRemainedSec(payload.durationSec);
+      setMyAnswer(payload.result.my.submitted);
+      setMyDelta(payload.result.my.delta);
+      setMyTotal(payload.result.my.total);
+      setMyIsCorrect(payload.result.my.correct);
+      setOpponentAnswer(payload.result.opponent.submitted);
+      setOpponentDelta(payload.result.opponent.delta);
+      setOpponentTotal(payload.result.opponent.total);
+      setOpponentIsCorrect(payload.result.opponent.correct);
+      setBestAnswer(payload.solution.bestAnswer);
+      setExplanation(payload.solution.explanation);
+
+      setMatchResult((prev) => ({
+        myTotalPoints: payload.result.my.total,
+        myWinCount: payload.result.my.correct ? prev.myWinCount + 1 : prev.myWinCount,
+        opponentTotalPoints: payload.result.opponent.total,
+        opponentWinCount: payload.result.opponent.correct
+          ? prev.opponentWinCount + 1
+          : prev.opponentWinCount,
+        roundResults: [
+          ...prev.roundResults,
+          {
+            index: roundIndex,
+            question: {
+              category,
+              difficulty,
+              content,
+            },
+            myAnswer: payload.result.my.submitted,
+            opponentAnswer: payload.result.opponent.submitted,
+            bestAnswer: payload.solution.bestAnswer,
+          },
+        ],
+      }));
+    },
+    [roundIndex, category, difficulty, content, setMatchResult],
+  );
 
   const handleRoundTick = useCallback(
     (payload: RoundTick) => {

@@ -7,9 +7,36 @@ import { getSocket } from '@/lib/socket';
 type MatchState = 'matching' | 'inGame';
 type OpponentInfo = { nickname: string; tier: string; expPoint: number } | null;
 
+type QuestionContent =
+  | { type: 'multiple'; question: string; option: string[] }
+  | { type: 'short'; question: string }
+  | { type: 'essay'; question: string }
+  | null;
+
+type RoundResult = {
+  index: number;
+  question: {
+    category: string[];
+    difficulty: number;
+    content: QuestionContent;
+  };
+  myAnswer: string;
+  opponentAnswer: string;
+  bestAnswer: string;
+};
+
+type MatchResult = {
+  myTotalPoints: number;
+  myWinCount: number;
+  opponentTotalPoints: number;
+  opponentWinCount: number;
+  roundResults: RoundResult[];
+};
+
 type MatchAPI = {
   matchState: MatchState;
   opponentInfo: OpponentInfo;
+  matchResult: MatchResult;
 };
 
 const MatchCtx = createContext<MatchAPI | null>(null);
@@ -17,6 +44,13 @@ const MatchCtx = createContext<MatchAPI | null>(null);
 export function MatchProvider({ children }: { children: React.ReactNode }) {
   const [matchState, setMatchState] = useState<MatchState>('matching');
   const [opponentInfo, setOpponentInfo] = useState<OpponentInfo>(null);
+  const [matchResult, setMatchResult] = useState<MatchResult>({
+    myTotalPoints: 0,
+    myWinCount: 0,
+    opponentTotalPoints: 0,
+    opponentWinCount: 0,
+    roundResults: [],
+  });
 
   const socketRef = useRef(getSocket());
 
@@ -56,7 +90,11 @@ export function MatchProvider({ children }: { children: React.ReactNode }) {
     };
   }, [handleConnect, handleMatchFound]);
 
-  return <MatchCtx.Provider value={{ matchState, opponentInfo }}>{children}</MatchCtx.Provider>;
+  return (
+    <MatchCtx.Provider value={{ matchState, opponentInfo, matchResult, setMatchResult }}>
+      {children}
+    </MatchCtx.Provider>
+  );
 }
 
 export function useMatch() {
