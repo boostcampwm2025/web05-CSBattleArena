@@ -5,7 +5,7 @@ export const QUIZ_PROMPTS = {
 [지시사항]
 1. 제공된 [문제], [문제 타입], [정답], [제출 답안 목록]을 분석해.
 
-2. **객관식(multiple_choice) 또는 단답형(short_answer) 문제:**
+2. **단답형(short_answer) 문제:**
    - **isCorrect:** 정답 여부를 정확히 판별해 (true/false).
    - **score:** 맞으면 10점, 틀리면 0점.
    - **feedback:**
