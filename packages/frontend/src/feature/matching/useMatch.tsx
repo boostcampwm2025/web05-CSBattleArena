@@ -35,6 +35,7 @@ type MatchResult = {
 
 type MatchAPI = {
   matchState: MatchState;
+  setMatchState: React.Dispatch<React.SetStateAction<MatchState>>;
   opponentInfo: OpponentInfo;
   matchResult: MatchResult;
   setMatchResult: React.Dispatch<React.SetStateAction<MatchResult>>;
@@ -104,7 +105,9 @@ export function MatchProvider({ children }: { children: React.ReactNode }) {
   }, [handleConnect, handleMatchFound, handleMatchEnd]);
 
   return (
-    <MatchCtx.Provider value={{ matchState, opponentInfo, matchResult, setMatchResult }}>
+    <MatchCtx.Provider
+      value={{ matchState, setMatchState, opponentInfo, matchResult, setMatchResult }}
+    >
       {children}
     </MatchCtx.Provider>
   );

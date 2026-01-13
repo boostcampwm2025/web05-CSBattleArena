@@ -1,9 +1,12 @@
 import { useUser } from '@/feature/auth/useUser';
 import { useMatch } from '@/feature/matching/useMatch';
+import { useMatchResult } from '../hooks/useMatchResult';
 
 export default function MatchResult() {
   const { userData } = useUser();
   const { opponentInfo, matchResult } = useMatch();
+  const { isClickedRematchBtn, isClickedExitBtn, onClickRematchBtn, onClickExitBtn } =
+    useMatchResult();
 
   return (
     <div className="relative z-10 flex h-full w-full flex-col items-center justify-center p-4">
@@ -223,6 +226,8 @@ export default function MatchResult() {
             <button
               className="w-full border-4 border-cyan-300 bg-gradient-to-r from-cyan-500 to-blue-500 p-2 text-2xl font-bold text-white shadow-lg shadow-cyan-500/50 transition-all duration-200 hover:scale-105 hover:from-cyan-400 hover:to-blue-400"
               style={{ fontFamily: 'Orbitron' }}
+              onClick={onClickRematchBtn}
+              disabled={isClickedRematchBtn}
             >
               <i className="ri-restart-line mr-2 text-2xl" />
               REMATCH
@@ -230,6 +235,8 @@ export default function MatchResult() {
             <button
               className="w-full border-4 border-red-300 bg-gradient-to-r from-red-500 to-rose-500 p-2 text-2xl font-bold text-white shadow-lg shadow-red-500/50 transition-all duration-200 hover:scale-105 hover:from-cyan-400 hover:to-rose-400"
               style={{ fontFamily: 'Orbitron' }}
+              onClick={onClickExitBtn}
+              disabled={isClickedExitBtn}
             >
               <i className="ri-logout-box-line mr-2 text-2xl" />
               EXIT
