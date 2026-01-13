@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { ClovaClientService } from './clova/clova-client.service';
-import { Question as QuestionEntity } from './entity';
+import { Category, Question as QuestionEntity } from './entity';
 import { QUIZ_CONSTANTS, QUIZ_ERROR_MESSAGES, QUIZ_LOG_MESSAGES } from './quiz.constants';
 import { QUIZ_PROMPTS } from './quiz-prompts';
 import {
@@ -25,10 +25,110 @@ export class QuizService {
     private readonly clovaClient: ClovaClientService,
     @InjectRepository(QuestionEntity)
     private readonly questionRepository: Repository<QuestionEntity>,
+    @InjectRepository(Category)
+    private readonly categoryRepository: Repository<Category>,
   ) {}
 
   /**
-   * 게임용 문제 조회 (DB 엔티티 반환)
+   * 싱글플레이 문제 생성
+   * - 사용자가 선택한 대분류 카테고리의 하위 카테고리에서 균등하게 10문제 조회
+   * - 카테고리별 균등 분배 (나머지는 앞 카테고리에 추가)
+   * - 사용 빈도: usageCount 낮은 것 우선
+   * - 품질 우선: qualityScore 높은 것 우선
+   * @param parentCategoryIds 선택된 대분류 카테고리 ID 배열 (예: DB, 네트워크)
+   * @param totalCount 총 문제 개수 (기본값: 10)
+   * @throws {InternalServerErrorException} DB에 충분한 질문이 없거나 변환 중 오류 발생 시
+   */
+  async generateSinglePlayQuestions(
+    parentCategoryIds: number[],
+    totalCount: number = 10,
+  ): Promise<Question[]> {
+    if (!parentCategoryIds || parentCategoryIds.length === 0) {
+      throw new InternalServerErrorException('카테고리를 선택해주세요.');
+    }
+
+    // 1. 각 대분류 카테고리의 하위 카테고리 ID 조회
+    const allChildCategoryIds: number[] = [];
+
+    for (const parentId of parentCategoryIds) {
+      const childCategories = await this.categoryRepository.find({
+        where: { parentId },
+        select: ['id'],
+      });
+      allChildCategoryIds.push(...childCategories.map((c) => c.id));
+    }
+
+    if (allChildCategoryIds.length === 0) {
+      throw new InternalServerErrorException('선택한 카테고리에 하위 카테고리가 없습니다.');
+    }
+
+    this.logger.log(
+      `하위 카테고리 ID: ${allChildCategoryIds.join(', ')} (총 ${allChildCategoryIds.length}개)`,
+    );
+
+    // 2. 대분류별 균등 분배
+    const questionsPerParent = Math.floor(totalCount / parentCategoryIds.length);
+    const remainder = totalCount % parentCategoryIds.length;
+
+    const allQuestions: QuestionEntity[] = [];
+
+    // 3. 각 대분류별로 문제 조회
+    for (let i = 0; i < parentCategoryIds.length; i++) {
+      const questionCount = questionsPerParent + (i < remainder ? 1 : 0);
+
+      // 해당 대분류의 하위 카테고리 ID만 추출
+      const childCategories = await this.categoryRepository.find({
+        where: { parentId: parentCategoryIds[i] },
+        select: ['id'],
+      });
+      const childIds = childCategories.map((c) => c.id);
+
+      if (childIds.length === 0) {
+        this.logger.warn(`카테고리 ID ${parentCategoryIds[i]}에 하위 카테고리가 없습니다.`);
+        continue;
+      }
+
+      // 하위 카테고리들에서 문제 조회
+      const questions = await this.questionRepository
+        .createQueryBuilder('q')
+        .innerJoin('q.categoryQuestions', 'cq')
+        .where('q.isActive = :isActive', { isActive: true })
+        .andWhere('cq.categoryId IN (:...childIds)', { childIds })
+        .orderBy('q.usageCount', 'ASC')
+        .addOrderBy('q.qualityScore', 'DESC')
+        .addOrderBy('RANDOM()')
+        .limit(questionCount)
+        .getMany();
+
+      allQuestions.push(...questions);
+    }
+
+    // 4. 문제 개수 검증
+    if (allQuestions.length < totalCount) {
+      this.logger.warn(
+        `선택한 카테고리에 충분한 문제가 없습니다. (${allQuestions.length}/${totalCount})`,
+      );
+    }
+
+    if (allQuestions.length === 0) {
+      throw new InternalServerErrorException('선택한 카테고리에 문제가 없습니다.');
+    }
+
+    // 5. 문제 섞기 (카테고리 순서대로 나오지 않도록)
+    const shuffledQuestions = allQuestions.sort(() => Math.random() - 0.5);
+
+    // 6. Entity -> quiz.types.ts 타입으로 변환
+    try {
+      return shuffledQuestions.map((q) => this.convertToQuizType(q));
+    } catch (error) {
+      this.logger.error(QUIZ_LOG_MESSAGES.CONVERSION_ERROR(error as Error));
+
+      throw new InternalServerErrorException(QUIZ_ERROR_MESSAGES.CONVERSION_ERROR);
+    }
+  }
+
+  /**
+   * 게임용 문제 조회 (멀티플레이, DB 엔티티 반환)
    * - 비즈니스 로직에 따라 균형있게 5개 질문을 조회
    * - 난이도 균형: easy 2개, medium 2개, hard 1개 (2:2:1)
    * - 타입 다양성: multiple 2개, short 2개, essay 1개
@@ -320,38 +420,28 @@ export class QuizService {
   }
 
   /**
-   * 채점
-   * - RoundResult 타입에 맞는 스키마를 전달합니다.
+   * 채점 (객관식, 단답형, 서술형 모두 지원)
+   * - 객관식/단답형: 10점 또는 0점
+   * - 서술형: 0~10점 부분 점수, 7점 이상이면 정답 처리
    */
   async gradeSubjectiveQuestion(
     question: ShortAnswerQuestion | EssayQuestion,
     submissions: Submission[],
   ): Promise<GradeResult[]> {
-    const schema = this.getGradingSchema();
-
-    // 문제 타입에 따른 정답 및 키워드 추출
-    const referenceAnswer =
-      question.type === 'short_answer' ? question.answer : question.sampleAnswer;
-    const keywords = question.keywords ? question.keywords.join(', ') : '없음';
+    const schema = this.getGradingSchema(question.type);
+    const answer = question.type === 'short_answer' ? question.answer : question.sampleAnswer;
 
     const userMessage = `
-    [채점 기준]
-    1. 문제: "${question.question}"
-    2. 모범 답안: "${referenceAnswer}"
-    3. 필수 포함 키워드: [${keywords}]
-    4. 규칙: 
-       - 사용자의 답안이 모범 답안의 문맥과 일치하고, 필수 키워드를 유사하게라도 포함하면 정답(true) 처리해줘.
-       - 오타는 의미가 훼손되지 않는 선에서 허용해줘.
-    
-    [플레이어 제출 답안]
-    ${JSON.stringify(submissions)}
-    
-    위 데이터를 바탕으로 각 플레이어의 정답 여부를 판단해줘.
-    `;
+  [문제 타입] ${question.type}
+  [문제] ${question.question}
+  [정답] ${answer}
+  [제출 답안 목록] ${JSON.stringify(submissions)}
 
-    // AI 호출 결과 타입 정의
+  위 데이터를 바탕으로 채점해줘.
+  `;
+
     type AiGradeResponse = {
-      grades: Omit<GradeResult, 'answer' | 'score'>[];
+      grades: Omit<GradeResult, 'answer'>[];
     };
 
     const result = await this.clovaClient.callClova<AiGradeResponse>({
@@ -360,25 +450,75 @@ export class QuizService {
       jsonSchema: schema,
     });
 
-    // 결과 매핑 (원본 답안 텍스트 복원 및 초기 점수 0점 세팅)
-    return result.grades.map((grade) => {
-      const originalSubmission = submissions.find((s) => s.playerId === grade.playerId);
+    return this.mapGradeResults(result.grades, submissions);
+  }
+
+  private mapGradeResults(
+    grades: Omit<GradeResult, 'answer'>[],
+    submissions: Submission[],
+  ): GradeResult[] {
+    return submissions.map((submission) => {
+      const grade = grades.find((g) => g.playerId === submission.playerId);
+
+      if (!grade) {
+        return this.createDefaultGradeResult(submission);
+      }
 
       return {
         playerId: grade.playerId,
-        answer: originalSubmission ? originalSubmission.answer : '',
+        answer: submission.answer,
         isCorrect: grade.isCorrect,
-        score: 0, // 점수는 GameService에서 난이도(difficulty)에 따라 부여
+        score: this.validateScore(grade.score, grade.isCorrect),
         feedback: grade.feedback,
       };
     });
   }
 
-  private getGradingSchema() {
+  private validateScore(score: number, isCorrect: boolean): number {
+    const MIN_SCORE = 0;
+    const MAX_SCORE = 10;
+
+    // 타입 검증
+    if (typeof score !== 'number' || isNaN(score)) {
+      this.logger.warn(`잘못된 점수 타입: ${score}`);
+
+      return isCorrect ? MAX_SCORE : MIN_SCORE;
+    }
+
+    // 범위 검증
+    if (score < MIN_SCORE || score > MAX_SCORE) {
+      this.logger.warn(`점수 범위 초과: ${score}`);
+
+      return Math.max(MIN_SCORE, Math.min(MAX_SCORE, score));
+    }
+
+    // 정답/오답 일관성 검증
+    if (!isCorrect && score > 0) {
+      this.logger.warn(`오답인데 점수 있음: ${score}`);
+
+      return MIN_SCORE;
+    }
+
+    return score;
+  }
+
+  private createDefaultGradeResult(submission: Submission): GradeResult {
+    return {
+      playerId: submission.playerId,
+      answer: submission.answer,
+      isCorrect: false,
+      score: 0,
+      feedback: '채점 오류가 발생했습니다.',
+    };
+  }
+
+  private getGradingSchema(questionType: 'short_answer' | 'essay') {
+    const scoreDescription = this.getScoreDescription(questionType);
+    const isCorrectDescription = this.getIsCorrectDescription(questionType);
+
     return {
       type: 'object',
       properties: {
-        roundNumber: { type: 'number' },
         grades: {
           type: 'array',
           items: {
@@ -387,18 +527,40 @@ export class QuizService {
               playerId: { type: 'string' },
               isCorrect: {
                 type: 'boolean',
-                description: '핵심 키워드가 포함되어 있고 의미가 통하면 true, 아니면 false',
+                description: isCorrectDescription,
+              },
+              score: {
+                type: 'number',
+                description: scoreDescription,
               },
               feedback: {
                 type: 'string',
-                description: '정답/오답에 대한 간략한 한 줄 피드백',
+                description: '플레이어별 맞춤 피드백 (정답 칭찬 또는 오답 원인 설명)',
               },
             },
-            required: ['playerId', 'isCorrect', 'feedback'],
+            required: ['playerId', 'isCorrect', 'score', 'feedback'],
           },
         },
       },
-      required: ['roundNumber', 'grades'],
+      required: ['grades'],
     };
+  }
+
+  private getScoreDescription(questionType: 'short_answer' | 'essay'): string {
+    switch (questionType) {
+      case 'essay':
+        return '서술형 문제: 0~10점 사이의 부분 점수';
+      case 'short_answer':
+        return '단답형: 10점(정답) 또는 0점(오답)';
+    }
+  }
+
+  private getIsCorrectDescription(questionType: 'short_answer' | 'essay'): string {
+    switch (questionType) {
+      case 'essay':
+        return '7점 이상이면 true, 7점 미만이면 false';
+      case 'short_answer':
+        return '정답이면 true, 오답이면 false';
+    }
   }
 }
