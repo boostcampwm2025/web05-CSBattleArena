@@ -1,23 +1,28 @@
-import { MatchService } from '../src/match/match.service';
-import { MatchSessionManager } from '../src/match/match-session-manager';
+import { GameService } from '../src/game/game.service';
+import { GameSessionManager } from '../src/game/game-session-manager';
 import { QuizService } from '../src/quiz/quiz.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import {
     MultipleChoiceQuestion,
     ShortAnswerQuestion,
-    Question,
 } from '../src/quiz/quiz.types';
-import { RoundData } from '../src/match/interfaces/match.interfaces';
+import { Question as QuestionEntity } from '../src/quiz/entity';
+import { RoundData } from '../src/game/interfaces/game.interfaces';
 import { SCORE_MAP, SPEED_BONUS } from '../src/quiz/quiz.constants';
+import { Match } from '../src/match/entity/match.entity';
+import { Round } from '../src/match/entity/round.entity';
+import { RoundAnswer } from '../src/match/entity/round-answer.entity';
 
 const mockUuid = 'user-uuid-123';
 const mockRoomId = 'room-123';
 const mockP1 = 'player-1';
 const mockP2 = 'player-2';
 
-describe('MatchService', () => {
-    let service: MatchService;
-    let sessionManager: MatchSessionManager;
+describe('GameService', () => {
+    let service: GameService;
+    let sessionManager: GameSessionManager;
     let aiService: QuizService;
 
     // Mock Objects
@@ -36,63 +41,66 @@ describe('MatchService', () => {
     };
 
     const mockAiService = {
-        generateQuestion: jest.fn(),
-        gradeSubjectiveQuestion: jest.fn(),
+        getQuestionsForGame: jest.fn(),
+        gradeQuestion: jest.fn(),
     };
 
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
             providers: [
-                MatchService,
-                { provide: MatchSessionManager, useValue: mockSessionManager },
+                GameService,
+                { provide: GameSessionManager, useValue: mockSessionManager },
                 { provide: QuizService, useValue: mockAiService },
+                { provide: getRepositoryToken(Match), useValue: {} },
+                { provide: getRepositoryToken(Round), useValue: {} },
+                { provide: getRepositoryToken(RoundAnswer), useValue: {} },
+                {
+                    provide: DataSource,
+                    useValue: {
+                        transaction: jest.fn().mockImplementation(async (cb) => cb({
+                            create: jest.fn().mockReturnValue({}),
+                            save: jest.fn().mockResolvedValue({})
+                        }))
+                    }
+                },
             ],
         }).compile();
 
-        service = module.get<MatchService>(MatchService);
-        sessionManager = module.get<MatchSessionManager>(MatchSessionManager);
+        service = module.get<GameService>(GameService);
+        sessionManager = module.get<GameSessionManager>(GameSessionManager);
         aiService = module.get<QuizService>(QuizService);
 
         // Reset mocks
         jest.clearAllMocks();
     });
 
-    describe('대기열 관리 (Queue Management)', () => {
+    // 대기열 관리는 MatchmakingService로 이동되었으므로 스킵
+    describe.skip('대기열 관리 (Queue Management) - MOVED TO MatchmakingService', () => {
         it('유저를 대기열에 추가하고 매칭 상대가 없으면 null을 반환해야 한다', () => {
-            const match = service.addToQueue('user1', {} as any);
-            expect(match).toBeNull();
-            expect(service.getQueueSize()).toBe(1);
+            // Moved to MatchmakingService
         });
 
         it('두 유저를 매칭시키고 매치 정보를 반환해야 한다', () => {
-            service.addToQueue('user1', {} as any);
-            const match = service.addToQueue('user2', {} as any);
-
-            expect(match).toBeDefined();
-            expect(match.player1).toBe('user1');
-            expect(match.player2).toBe('user2');
-            expect(service.getQueueSize()).toBe(0);
+            // Moved to MatchmakingService
         });
 
         it('대기열에서 유저를 제거해야 한다', () => {
-            service.addToQueue('user1', {} as any);
-            service.removeFromQueue('user1');
-            expect(service.getQueueSize()).toBe(0);
+            // Moved to MatchmakingService
         });
     });
 
     describe('라운드 시작 (startRound)', () => {
         it('라운드를 시작하고, 문제를 생성한 뒤 해당 라운드의 문제를 설정해야 한다', async () => {
             // Mock Data
-            const mockQuestions: Question[] = [
-                { type: 'multiple_choice', question: 'Q1' } as any,
-                { type: 'multiple_choice', question: 'Q2' } as any,
+            const mockQuestionEntities: QuestionEntity[] = [
+                { id: 1, questionType: 'multiple', content: 'Q1' } as any,
+                { id: 2, questionType: 'short_answer', content: 'Q2' } as any,
             ];
             const mockRoundData: RoundData = { roundNumber: 1 } as any;
 
             // Mock Implementation
             mockSessionManager.startNextRound.mockReturnValue(mockRoundData);
-            mockAiService.generateQuestion.mockResolvedValue(mockQuestions);
+            mockAiService.getQuestionsForGame.mockResolvedValue(mockQuestionEntities);
             mockSessionManager.getRoundData.mockReturnValue(mockRoundData);
 
             // Execute
@@ -100,24 +108,24 @@ describe('MatchService', () => {
 
             // Verify
             expect(sessionManager.startNextRound).toHaveBeenCalledWith(mockRoomId);
-            expect(aiService.generateQuestion).toHaveBeenCalled();
-            // roundNumber가 1이면 index 0번 문제 할당
+            expect(aiService.getQuestionsForGame).toHaveBeenCalled();
             expect(sessionManager.setQuestion).toHaveBeenCalledWith(
                 mockRoomId,
-                mockQuestions[0],
+                mockQuestionEntities[0],
             );
             expect(result).toEqual(mockRoundData);
         });
     });
 
     describe('정답 제출 및 채점 (submitAnswer & Grading)', () => {
-        const mockQuestion: MultipleChoiceQuestion = {
-            type: 'multiple_choice',
-            difficulty: 'medium',
-            question: 'Test Q',
-            options: { A: 'A', B: 'B', C: 'C', D: 'D' },
-            answer: 'A',
-        };
+        const mockQuestion: QuestionEntity = {
+            id: 1,
+            questionType: 'multiple',
+            difficulty: 3, // medium
+            content: 'Test Q',
+            options: JSON.stringify({ A: 'A', B: 'B', C: 'C', D: 'D' }),
+            correctAnswer: 'A',
+        } as any;
 
         const mockSession = {
             roomId: mockRoomId,
@@ -152,12 +160,18 @@ describe('MatchService', () => {
             });
             mockSessionManager.getGameSession.mockReturnValue(mockSession);
 
+            // Mock gradeQuestion return
+            mockAiService.gradeQuestion.mockResolvedValue([
+                { playerId: mockP1, answer: 'A', isCorrect: true, score: 0, feedback: '' },
+                { playerId: mockP2, answer: 'B', isCorrect: false, score: 0, feedback: '' },
+            ]);
+
             // Execute
             const result: any = await service.submitAnswer(mockRoomId, mockP1, 'A');
 
             // Verify
-            // 1. 객관식은 로컬 채점이므로 AI 호출 안함
-            expect(aiService.gradeSubjectiveQuestion).not.toHaveBeenCalled();
+            // 1. 객관식은 로컬 채점이지만 gradeQuestion 메서드는 호출됨
+            expect(aiService.gradeQuestion).toHaveBeenCalled();
 
             // 2. 점수 부여 확인 (P1은 정답이므로 medium 점수 + 스피드 보너스)
             expect(sessionManager.addScore).toHaveBeenCalledWith(
@@ -176,13 +190,13 @@ describe('MatchService', () => {
         });
 
         it('주관식 문제일 경우 AI를 통해 채점을 진행해야 한다', async () => {
-            const shortQuestion: ShortAnswerQuestion = {
-                type: 'short_answer',
-                difficulty: 'hard',
-                question: 'Who are you?',
-                answer: 'Gemini',
-                keywords: ['Gemini'],
-            };
+            const shortQuestion: QuestionEntity = {
+                id: 2,
+                questionType: 'short_answer',
+                difficulty: 5, // hard
+                content: 'Who are you?',
+                correctAnswer: 'Gemini',
+            } as any;
 
             // Setup
             mockSessionManager.isAllSubmitted.mockReturnValue(true);
@@ -193,7 +207,7 @@ describe('MatchService', () => {
             mockSessionManager.getGameSession.mockReturnValue(mockSession);
 
             // AI Mock Return
-            mockAiService.gradeSubjectiveQuestion.mockResolvedValue([
+            mockAiService.gradeQuestion.mockResolvedValue([
                 {
                     playerId: mockP1,
                     isCorrect: true,
@@ -207,7 +221,7 @@ describe('MatchService', () => {
             await service.submitAnswer(mockRoomId, mockP1, 'Gemini');
 
             // Verify
-            expect(aiService.gradeSubjectiveQuestion).toHaveBeenCalled();
+            expect(aiService.gradeQuestion).toHaveBeenCalled();
             expect(sessionManager.addScore).toHaveBeenCalledWith(
                 mockRoomId,
                 mockP1,
@@ -226,6 +240,12 @@ describe('MatchService', () => {
                 ],
             });
             mockSessionManager.getGameSession.mockReturnValue(mockSession);
+
+            // Mock gradeQuestion return
+            mockAiService.gradeQuestion.mockResolvedValue([
+                { playerId: mockP1, answer: 'A', isCorrect: true, score: 0, feedback: '' },
+                { playerId: mockP2, answer: 'A', isCorrect: true, score: 0, feedback: '' },
+            ]);
 
             // Execute
             const result: any = await service.submitAnswer(mockRoomId, mockP1, 'A');
@@ -256,6 +276,12 @@ describe('MatchService', () => {
                 ],
             });
             mockSessionManager.getGameSession.mockReturnValue(mockSession);
+
+            // Mock gradeQuestion return
+            mockAiService.gradeQuestion.mockResolvedValue([
+                { playerId: mockP1, answer: 'B', isCorrect: false, score: 0, feedback: '' },
+                { playerId: mockP2, answer: 'A', isCorrect: true, score: 0, feedback: '' },
+            ]);
 
             // Execute
             const result: any = await service.submitAnswer(mockRoomId, mockP1, 'B');

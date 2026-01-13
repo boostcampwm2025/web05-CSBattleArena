@@ -8,19 +8,22 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { MatchService } from './match.service';
-import { MatchSessionManager } from './match-session-manager';
-import { UserInfo } from './interfaces/user.interface';
-import { SubmitAnswerRequest, SubmitAnswerResponse } from './interfaces/match.interfaces';
+import { MatchmakingService } from './matchmaking.service';
+import { GameService } from '../game/game.service';
+import { RoundProgressionService } from '../game/round-progression.service';
+import { UserInfo } from '../game/interfaces/user.interface';
+import { MatchmakingSessionManager } from './matchmaking-session-manager';
 
 @WebSocketGateway({ namespace: '/ws', cors: true })
-export class MatchGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
   constructor(
-    private readonly matchService: MatchService,
-    private readonly sessionManager: MatchSessionManager,
+    private readonly matchmakingService: MatchmakingService,
+    private readonly sessionManager: MatchmakingSessionManager,
+    private readonly gameService: GameService,
+    private readonly roundProgression: RoundProgressionService,
   ) {}
 
   handleConnection(client: Socket): void {
@@ -64,7 +67,7 @@ export class MatchGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const sessionId = this.sessionManager.createQueueSession(client.id, userId, userInfo);
 
-      const match = this.matchService.addToQueue(userId, userInfo);
+      const match = this.matchmakingService.addToQueue(userId);
 
       if (match) {
         const player1Session = this.sessionManager.getQueueSessionByUserId(match.player1);
@@ -91,7 +94,8 @@ export class MatchGateway implements OnGatewayConnection, OnGatewayDisconnect {
               opponent: player1Session.userInfo,
             });
 
-            this.matchService.startGame(
+            // 게임 세션 생성
+            this.gameService.startGameFromMatch(
               match.roomId,
               match.player1,
               player1Session.socketId,
@@ -99,8 +103,10 @@ export class MatchGateway implements OnGatewayConnection, OnGatewayDisconnect {
               match.player2,
               player2Session.socketId,
               player2Session.userInfo,
-              this.server,
             );
+
+            // 라운드 시퀀스 시작
+            this.roundProgression.startRoundSequence(match.roomId);
           });
         }
       }
@@ -127,45 +133,8 @@ export class MatchGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return { ok: false, error: 'Invalid session' };
       }
 
-      this.matchService.removeFromQueue(session.userId);
+      this.matchmakingService.removeFromQueue(session.userId);
       this.sessionManager.removeQueueSession(data.sessionId);
-
-      return { ok: true };
-    } catch (error) {
-      return { ok: false, error: error instanceof Error ? error.message : 'Unknown error' };
-    }
-  }
-
-  @SubscribeMessage('submit:answer')
-  async handleSubmitAnswer(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: SubmitAnswerRequest,
-  ): Promise<SubmitAnswerResponse> {
-    const userId = this.sessionManager.getUserId(client.id);
-
-    if (!userId) {
-      return { ok: false, error: 'User not found' };
-    }
-
-    const roomId = this.sessionManager.getRoomBySocketId(client.id);
-
-    if (!roomId) {
-      return { ok: false, error: 'Room not found' };
-    }
-
-    try {
-      await this.matchService.submitAnswer(roomId, userId, data.answer);
-
-      const gameSession = this.sessionManager.getGameSession(roomId);
-
-      if (gameSession) {
-        const opponentSocketId =
-          userId === gameSession.player1Id
-            ? gameSession.player2SocketId
-            : gameSession.player1SocketId;
-
-        this.server.to(opponentSocketId).emit('opponent:submitted', {});
-      }
 
       return { ok: true };
     } catch (error) {
@@ -176,12 +145,9 @@ export class MatchGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleDisconnect(client: Socket): void {
     const disconnectInfo = this.sessionManager.disconnect(client.id);
 
+    // 큐에서 제거
     if (disconnectInfo.userId) {
-      this.matchService.removeFromQueue(disconnectInfo.userId);
-    }
-
-    if (disconnectInfo.roomId && disconnectInfo.userId) {
-      this.matchService.handlePlayerDisconnect(disconnectInfo.roomId, disconnectInfo.userId);
+      this.matchmakingService.removeFromQueue(disconnectInfo.userId);
     }
   }
 }

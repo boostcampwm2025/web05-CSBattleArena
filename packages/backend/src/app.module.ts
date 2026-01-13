@@ -1,7 +1,8 @@
 import { Module, ModuleMetadata } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { MatchModule } from './match/match.module';
+import { GameModule } from './game/game.module';
+import { MatchmakingModule } from './matchmaking/matchmaking.module';
 import { QuizModule } from './quiz/quiz.module';
 import { HealthController } from './health/health.controller';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -40,7 +41,8 @@ const metadata: ModuleMetadata = {
     typeOrmModule,
     WinstonModule.forRoot(feedbackLoggerConfig),
     QuizModule,
-    MatchModule,
+    MatchmakingModule,
+    GameModule,
     FeedbackModule,
   ],
   controllers: [AppController, HealthController],
