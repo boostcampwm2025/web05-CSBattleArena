@@ -1,6 +1,6 @@
 import { GameSessionManager } from '../src/game/game-session-manager';
 import { UserInfo } from '../src/game/interfaces/user.interface';
-import { Question } from '../src/quiz/quiz.types';
+import { Question as QuestionEntity } from '../src/quiz/entity';
 
 describe('GameSessionManager - Game Session Management', () => {
   let sessionManager: GameSessionManager;
@@ -17,18 +17,19 @@ describe('GameSessionManager - Game Session Management', () => {
     exp_point: 1200,
   };
 
-  const mockQuestion: Question = {
-    type: 'multiple_choice',
-    difficulty: 'medium',
-    question: 'What is 2+2?',
-    options: {
+  const mockQuestion: QuestionEntity = {
+    id: 1,
+    questionType: 'multiple',
+    difficulty: 3, // medium
+    content: 'What is 2+2?',
+    options: JSON.stringify({
       A: '3',
       B: '4',
       C: '5',
       D: '6',
-    },
-    answer: 'B',
-  };
+    }),
+    correctAnswer: 'B',
+  } as any;
 
   beforeEach(() => {
     sessionManager = new GameSessionManager();

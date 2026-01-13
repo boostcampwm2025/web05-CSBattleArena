@@ -7,8 +7,8 @@ import { DataSource } from 'typeorm';
 import {
     MultipleChoiceQuestion,
     ShortAnswerQuestion,
-    Question,
 } from '../src/quiz/quiz.types';
+import { Question as QuestionEntity } from '../src/quiz/entity';
 import { RoundData } from '../src/game/interfaces/game.interfaces';
 import { SCORE_MAP, SPEED_BONUS } from '../src/quiz/quiz.constants';
 import { Match } from '../src/match/entity/match.entity';
@@ -41,8 +41,8 @@ describe('GameService', () => {
     };
 
     const mockAiService = {
-        generateQuestion: jest.fn(),
-        gradeSubjectiveQuestion: jest.fn(),
+        getQuestionsForGame: jest.fn(),
+        gradeQuestion: jest.fn(),
     };
 
     beforeEach(async () => {
@@ -92,15 +92,15 @@ describe('GameService', () => {
     describe('라운드 시작 (startRound)', () => {
         it('라운드를 시작하고, 문제를 생성한 뒤 해당 라운드의 문제를 설정해야 한다', async () => {
             // Mock Data
-            const mockQuestions: Question[] = [
-                { type: 'multiple_choice', question: 'Q1' } as any,
-                { type: 'multiple_choice', question: 'Q2' } as any,
+            const mockQuestionEntities: QuestionEntity[] = [
+                { id: 1, questionType: 'multiple', content: 'Q1' } as any,
+                { id: 2, questionType: 'short_answer', content: 'Q2' } as any,
             ];
             const mockRoundData: RoundData = { roundNumber: 1 } as any;
 
             // Mock Implementation
             mockSessionManager.startNextRound.mockReturnValue(mockRoundData);
-            mockAiService.generateQuestion.mockResolvedValue(mockQuestions);
+            mockAiService.getQuestionsForGame.mockResolvedValue(mockQuestionEntities);
             mockSessionManager.getRoundData.mockReturnValue(mockRoundData);
 
             // Execute
@@ -108,24 +108,24 @@ describe('GameService', () => {
 
             // Verify
             expect(sessionManager.startNextRound).toHaveBeenCalledWith(mockRoomId);
-            expect(aiService.generateQuestion).toHaveBeenCalled();
-            // roundNumber가 1이면 index 0번 문제 할당
+            expect(aiService.getQuestionsForGame).toHaveBeenCalled();
             expect(sessionManager.setQuestion).toHaveBeenCalledWith(
                 mockRoomId,
-                mockQuestions[0],
+                mockQuestionEntities[0],
             );
             expect(result).toEqual(mockRoundData);
         });
     });
 
     describe('정답 제출 및 채점 (submitAnswer & Grading)', () => {
-        const mockQuestion: MultipleChoiceQuestion = {
-            type: 'multiple_choice',
-            difficulty: 'medium',
-            question: 'Test Q',
-            options: { A: 'A', B: 'B', C: 'C', D: 'D' },
-            answer: 'A',
-        };
+        const mockQuestion: QuestionEntity = {
+            id: 1,
+            questionType: 'multiple',
+            difficulty: 3, // medium
+            content: 'Test Q',
+            options: JSON.stringify({ A: 'A', B: 'B', C: 'C', D: 'D' }),
+            correctAnswer: 'A',
+        } as any;
 
         const mockSession = {
             roomId: mockRoomId,
@@ -160,12 +160,18 @@ describe('GameService', () => {
             });
             mockSessionManager.getGameSession.mockReturnValue(mockSession);
 
+            // Mock gradeQuestion return
+            mockAiService.gradeQuestion.mockResolvedValue([
+                { playerId: mockP1, answer: 'A', isCorrect: true, score: 0, feedback: '' },
+                { playerId: mockP2, answer: 'B', isCorrect: false, score: 0, feedback: '' },
+            ]);
+
             // Execute
             const result: any = await service.submitAnswer(mockRoomId, mockP1, 'A');
 
             // Verify
-            // 1. 객관식은 로컬 채점이므로 AI 호출 안함
-            expect(aiService.gradeSubjectiveQuestion).not.toHaveBeenCalled();
+            // 1. 객관식은 로컬 채점이지만 gradeQuestion 메서드는 호출됨
+            expect(aiService.gradeQuestion).toHaveBeenCalled();
 
             // 2. 점수 부여 확인 (P1은 정답이므로 medium 점수 + 스피드 보너스)
             expect(sessionManager.addScore).toHaveBeenCalledWith(
@@ -184,13 +190,13 @@ describe('GameService', () => {
         });
 
         it('주관식 문제일 경우 AI를 통해 채점을 진행해야 한다', async () => {
-            const shortQuestion: ShortAnswerQuestion = {
-                type: 'short_answer',
-                difficulty: 'hard',
-                question: 'Who are you?',
-                answer: 'Gemini',
-                keywords: ['Gemini'],
-            };
+            const shortQuestion: QuestionEntity = {
+                id: 2,
+                questionType: 'short_answer',
+                difficulty: 5, // hard
+                content: 'Who are you?',
+                correctAnswer: 'Gemini',
+            } as any;
 
             // Setup
             mockSessionManager.isAllSubmitted.mockReturnValue(true);
@@ -201,7 +207,7 @@ describe('GameService', () => {
             mockSessionManager.getGameSession.mockReturnValue(mockSession);
 
             // AI Mock Return
-            mockAiService.gradeSubjectiveQuestion.mockResolvedValue([
+            mockAiService.gradeQuestion.mockResolvedValue([
                 {
                     playerId: mockP1,
                     isCorrect: true,
@@ -215,7 +221,7 @@ describe('GameService', () => {
             await service.submitAnswer(mockRoomId, mockP1, 'Gemini');
 
             // Verify
-            expect(aiService.gradeSubjectiveQuestion).toHaveBeenCalled();
+            expect(aiService.gradeQuestion).toHaveBeenCalled();
             expect(sessionManager.addScore).toHaveBeenCalledWith(
                 mockRoomId,
                 mockP1,
@@ -234,6 +240,12 @@ describe('GameService', () => {
                 ],
             });
             mockSessionManager.getGameSession.mockReturnValue(mockSession);
+
+            // Mock gradeQuestion return
+            mockAiService.gradeQuestion.mockResolvedValue([
+                { playerId: mockP1, answer: 'A', isCorrect: true, score: 0, feedback: '' },
+                { playerId: mockP2, answer: 'A', isCorrect: true, score: 0, feedback: '' },
+            ]);
 
             // Execute
             const result: any = await service.submitAnswer(mockRoomId, mockP1, 'A');
@@ -264,6 +276,12 @@ describe('GameService', () => {
                 ],
             });
             mockSessionManager.getGameSession.mockReturnValue(mockSession);
+
+            // Mock gradeQuestion return
+            mockAiService.gradeQuestion.mockResolvedValue([
+                { playerId: mockP1, answer: 'B', isCorrect: false, score: 0, feedback: '' },
+                { playerId: mockP2, answer: 'A', isCorrect: true, score: 0, feedback: '' },
+            ]);
 
             // Execute
             const result: any = await service.submitAnswer(mockRoomId, mockP1, 'B');

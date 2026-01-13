@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { UserInfo } from './interfaces/user.interface';
-import { Question } from '../quiz/quiz.types';
+import { Question as QuestionEntity } from '../quiz/entity';
 import {
   GameSession,
   GradingInput,
@@ -132,7 +132,7 @@ export class GameSessionManager {
     return roundData;
   }
 
-  setQuestion(roomId: string, question: Question): void {
+  setQuestion(roomId: string, question: QuestionEntity): void {
     const session = this.getGameSessionOrThrow(roomId);
     const round = this.getCurrentRoundOrThrow(session);
 
@@ -145,7 +145,7 @@ export class GameSessionManager {
     round.status = 'in_progress';
   }
 
-  getQuestion(roomId: string): Question | null {
+  getQuestion(roomId: string): QuestionEntity | null {
     const session = this.getGameSessionOrThrow(roomId);
     const round = this.getCurrentRoundOrThrow(session);
 

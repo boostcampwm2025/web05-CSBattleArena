@@ -4,7 +4,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { ShortAnswerQuestion, Submission } from "../src/quiz/quiz.types";
 import { QuizService } from "../src/quiz/quiz.service";
 import { ClovaClientService } from "../src/quiz/clova/clova-client.service";
-import { Question } from "../src/quiz/entity";
+import { Question, Category } from "../src/quiz/entity";
 
 describe('QuizService 통합 테스트 (실제 AI 채점)', () => {
     let service: QuizService;
@@ -32,6 +32,10 @@ describe('QuizService 통합 테스트 (실제 AI 채점)', () => {
                     provide: getRepositoryToken(Question),
                     useValue: mockRepository,
                 },
+                {
+                    provide: getRepositoryToken(Category),
+                    useValue: mockRepository,
+                },
             ],
         }).compile();
 
@@ -41,13 +45,13 @@ describe('QuizService 통합 테스트 (실제 AI 채점)', () => {
     // AI 응답이 늦을 수 있으므로 타임아웃을 60초로 설정
     it('Clova Studio를 통해 주관식 답안을 정확하게 채점해야 한다', async () => {
         // [Given] 테스트 데이터: HTTP 포트 문제
-        const question: ShortAnswerQuestion = {
-            type: 'short_answer',
-            difficulty: 'medium',
-            question: 'HTTP 프로토콜이 사용하는 기본 포트 번호는 무엇인가요?',
-            answer: '80', // 모범 답안
-            keywords: ['80', '80번'], // 필수 키워드
-        };
+        const questionEntity: Question = {
+            id: 1,
+            questionType: 'short',
+            difficulty: 3, // medium
+            content: 'HTTP 프로토콜이 사용하는 기본 포트 번호는 무엇인가요?',
+            correctAnswer: '80', // 모범 답안
+        } as Question;
 
         // 다양한 답변 케이스 준비
         const submissions: Submission[] = [
@@ -60,8 +64,8 @@ describe('QuizService 통합 테스트 (실제 AI 채점)', () => {
 
         console.log('🚀 Clova AI에게 채점 요청 중... (시간이 걸릴 수 있습니다)');
 
-        // [When] 실제 서비스 호출
-        const results = await service.gradeSubjectiveQuestion(question, submissions);
+        // [When] 실제 서비스 호출 (public 메서드 사용)
+        const results = await service.gradeQuestion(questionEntity, submissions);
 
         // [Then] 로그 출력 및 검증
         console.log('✅ AI 채점 결과:\n', JSON.stringify(results, null, 2));

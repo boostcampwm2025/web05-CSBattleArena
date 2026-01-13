@@ -163,12 +163,12 @@ export class RoundProgressionService {
       // 문제 타입에 따라 정답 추출
       let bestAnswer: string;
 
-      if (question.type === 'multiple_choice') {
-        bestAnswer = question.answer;
-      } else if (question.type === 'short_answer') {
-        bestAnswer = question.answer;
+      if (question.questionType === 'multiple') {
+        bestAnswer = question.correctAnswer;
+      } else if (question.questionType === 'short') {
+        bestAnswer = question.correctAnswer;
       } else {
-        bestAnswer = question.sampleAnswer;
+        bestAnswer = question.correctAnswer;
       }
 
       const startedAt = Date.now();
