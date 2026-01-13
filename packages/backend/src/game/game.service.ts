@@ -6,9 +6,10 @@ import { GameSessionManager } from './game-session-manager';
 import { QuizService } from '../quiz/quiz.service';
 import { UserInfo } from './interfaces/user.interface';
 import { FinalResult, RoundData } from './interfaces/game.interfaces';
-import { GradeResult, MultipleChoiceQuestion, RoundResult, Submission } from '../quiz/quiz.types';
+import { GradeResult, RoundResult, Submission } from '../quiz/quiz.types';
 import { SCORE_MAP, SPEED_BONUS } from '../quiz/quiz.constants';
 import { Match, Round, RoundAnswer } from '../match/entity';
+import { Question as QuestionEntity } from '../quiz/entity';
 
 @Injectable()
 export class GameService {
@@ -59,7 +60,8 @@ export class GameService {
   async startRound(roomId: string): Promise<RoundData> {
     const roundData = this.sessionManager.startNextRound(roomId);
 
-    const questions = await this.aiService.generateQuestion();
+    // DB에서 Question 엔티티 조회
+    const questions = await this.aiService.getQuestionsForGame();
 
     const targetQuestion = questions[(roundData.roundNumber - 1) % questions.length];
 
@@ -90,10 +92,12 @@ export class GameService {
 
     let gradeResults: GradeResult[];
 
-    if (question.type === 'multiple_choice') {
+    if (question.questionType === 'multiple') {
       gradeResults = this.gradeMultipleChoice(question, submissions);
     } else {
-      gradeResults = await this.aiService.gradeSubjectiveQuestion(question, submissions);
+      // DB 엔티티를 게임 타입으로 변환하여 채점
+      const gameTypeQuestion = this.convertEntityToGameType(question);
+      gradeResults = await this.aiService.gradeSubjectiveQuestion(gameTypeQuestion, submissions);
     }
 
     // 제출 시간 기반 보너스 계산 - 정답자 중 가장 빠른 사람 찾기
@@ -112,8 +116,9 @@ export class GameService {
         : null;
 
     // 점수 반영
+    const difficulty = this.mapDifficulty(question.difficulty);
     const finalGrades = gradeResults.map((grade) => {
-      let score = grade.isCorrect ? SCORE_MAP[question.difficulty] : 0;
+      let score = grade.isCorrect ? SCORE_MAP[difficulty] : 0;
 
       // 정답이면서 정답자 중 가장 빨리 제출한 경우 보너스 점수 추가
       if (
@@ -191,22 +196,71 @@ export class GameService {
   /**
    * 객관식 채점
    */
-  private gradeMultipleChoice(
-    question: MultipleChoiceQuestion,
-    submissions: Submission[],
-  ): GradeResult[] {
+  private gradeMultipleChoice(question: QuestionEntity, submissions: Submission[]): GradeResult[] {
     return submissions.map((sub) => {
       const sanitizedAnswer = sub.answer.trim().toUpperCase();
-      const isCorrect = sanitizedAnswer === question.answer;
+      const isCorrect = sanitizedAnswer === question.correctAnswer;
 
       return {
         playerId: sub.playerId,
         answer: sub.answer,
         isCorrect,
         score: 0,
-        feedback: isCorrect ? 'Correct!' : `Wrong. The answer was ${question.answer}.`,
+        feedback: isCorrect ? 'Correct!' : `Wrong. The answer was ${question.correctAnswer}.`,
       };
     });
+  }
+
+  /**
+   * DB 엔티티를 게임 타입으로 변환 (채점용)
+   */
+  private convertEntityToGameType(entity: QuestionEntity) {
+    const difficulty = this.mapDifficulty(entity.difficulty);
+
+    if (entity.questionType === 'short') {
+      const questionText =
+        typeof entity.content === 'string' ? entity.content : JSON.stringify(entity.content);
+
+      return {
+        id: entity.id,
+        type: 'short_answer' as const,
+        question: questionText,
+        difficulty,
+        answer: entity.correctAnswer,
+      };
+    } else if (entity.questionType === 'essay') {
+      const questionText =
+        typeof entity.content === 'string' ? entity.content : JSON.stringify(entity.content);
+
+      return {
+        id: entity.id,
+        type: 'essay' as const,
+        question: questionText,
+        difficulty,
+        sampleAnswer: entity.correctAnswer,
+      };
+    }
+
+    throw new Error(`Cannot convert question type: ${entity.questionType as string}`);
+  }
+
+  /**
+   * 숫자 난이도를 문자열 난이도로 매핑
+   */
+  private mapDifficulty(numDifficulty: number | null): 'easy' | 'medium' | 'hard' {
+    if (!numDifficulty) {
+      return 'medium';
+    }
+
+    if (numDifficulty <= 2) {
+      return 'easy';
+    }
+
+    if (numDifficulty === 3) {
+      return 'medium';
+    }
+
+    return 'hard';
   }
 
   /**

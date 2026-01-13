@@ -1,4 +1,4 @@
-import { Question } from '../../quiz/quiz.types';
+import { Question as QuestionEntity } from '../../quiz/entity';
 import { UserInfo } from './user.interface';
 
 // ============================================
@@ -34,7 +34,7 @@ export interface Submission {
 export interface RoundData {
   roundNumber: number;
   status: RoundStatus;
-  question: Question | null;
+  question: QuestionEntity | null;
   questionId: number | null; // DB에서 조회한 question의 ID
   submissions: {
     [playerId: string]: Submission | null;
@@ -67,7 +67,7 @@ export interface FinalResult {
 }
 
 export interface GradingInput {
-  question: Question;
+  question: QuestionEntity;
   submissions: Submission[];
 }
 
@@ -90,10 +90,8 @@ export interface RoundStartEvent {
   question: {
     category: string[];
     difficulty: string;
-    content:
-      | { type: 'multiple'; question: string; option: string[] }
-      | { type: 'short'; question: string }
-      | { type: 'essay'; question: string };
+    type: string;
+    content: { question: string; option: string[] } | { question: string };
   };
 }
 

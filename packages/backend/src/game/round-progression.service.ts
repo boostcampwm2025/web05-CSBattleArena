@@ -80,7 +80,18 @@ export class RoundProgressionService {
         throw new Error(`Question not found for room ${roomId}`);
       }
 
-      const difficulty = question.difficulty as Difficulty;
+      // 난이도 매핑 (DB의 숫자 난이도 -> 문자열)
+      const difficultyNum = question.difficulty || 3;
+      let difficulty: Difficulty;
+
+      if (difficultyNum <= 2) {
+        difficulty = 'easy';
+      } else if (difficultyNum === 3) {
+        difficulty = 'medium';
+      } else {
+        difficulty = 'hard';
+      }
+
       const questionDuration = ROUND_DURATIONS.QUESTION[difficulty];
 
       // Question 변환 (transformer 사용)

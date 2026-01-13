@@ -1,62 +1,63 @@
-import { Question } from '../../quiz/entity';
+import { Question as QuestionEntity } from '../../quiz/entity';
 
 /**
- * Question content 타입 정의
+ * DB Question 엔티티를 클라이언트 API 형식으로 변환
+ * 설계 문서 명세: type이 최상위에 위치
  */
-interface QuestionContent {
-  question?: string;
-  options?: string[];
-  A?: string;
-  B?: string;
-  C?: string;
-  D?: string;
-}
-
-/**
- * Question content를 type에 따라 적절한 형식으로 변환
- */
-function formatQuestionContent(
-  question: Question,
-):
-  | { type: 'multiple'; question: string; option: string[] }
-  | { type: 'short'; question: string }
-  | { type: 'essay'; question: string } {
-  // content가 string인 경우 JSON 파싱
-  const content: QuestionContent | string =
-    typeof question.content === 'string'
-      ? (JSON.parse(question.content) as QuestionContent)
-      : (question.content as QuestionContent);
+function transformQuestionForClient(
+  question: QuestionEntity,
+  categories: { parent?: { name: string }; name: string },
+): {
+  category: string[];
+  difficulty: string;
+  type: string;
+  content: { question: string; option: string[] } | { question: string };
+} {
+  const category = [categories.parent?.name || 'CS', categories.name];
+  const difficulty = mapDifficulty(question.difficulty);
 
   switch (question.questionType) {
     case 'multiple': {
-      const contentObj = typeof content === 'string' ? { question: content } : content;
+      const content = parseContent(question.content);
 
       return {
+        category,
+        difficulty,
         type: 'multiple',
-        question: contentObj.question ?? (typeof content === 'string' ? content : ''),
-        option:
-          contentObj.options ??
-          [contentObj.A, contentObj.B, contentObj.C, contentObj.D].filter(
-            (opt): opt is string => opt !== undefined,
-          ),
+        content: {
+          question: content.question || '',
+          option: content.options
+            ? [content.options.A, content.options.B, content.options.C, content.options.D]
+            : [],
+        },
       };
     }
 
     case 'short': {
-      const contentObj = typeof content === 'string' ? { question: content } : content;
+      const questionText =
+        typeof question.content === 'string' ? question.content : JSON.stringify(question.content);
 
       return {
+        category,
+        difficulty,
         type: 'short',
-        question: contentObj.question ?? (typeof content === 'string' ? content : ''),
+        content: {
+          question: questionText,
+        },
       };
     }
 
     case 'essay': {
-      const contentObj = typeof content === 'string' ? { question: content } : content;
+      const questionText =
+        typeof question.content === 'string' ? question.content : JSON.stringify(question.content);
 
       return {
+        category,
+        difficulty,
         type: 'essay',
-        question: contentObj.question ?? (typeof content === 'string' ? content : ''),
+        content: {
+          question: questionText,
+        },
       };
     }
 
@@ -66,34 +67,42 @@ function formatQuestionContent(
 }
 
 /**
- * DB Question 엔티티를 클라이언트 API 형식으로 변환
+ * content 파싱 헬퍼
  */
-function transformQuestionForClient(
-  question: Question,
-  categories: { parent?: { name: string }; name: string },
-): {
-  category: string[];
-  difficulty: string;
-  content:
-    | { type: 'multiple'; question: string; option: string[] }
-    | { type: 'short'; question: string }
-    | { type: 'essay'; question: string };
+function parseContent(content: string | object): {
+  question?: string;
+  options?: { A: string; B: string; C: string; D: string };
 } {
-  // difficulty를 문자열로 변환 (1 -> 'easy', 2 -> 'medium', 3 -> 'hard')
-  const difficultyMap: { [key: number]: string } = {
-    1: 'easy',
-    2: 'medium',
-    3: 'hard',
-  };
-  const difficultyStr = question.difficulty
-    ? difficultyMap[question.difficulty] || 'medium'
-    : 'medium';
+  if (typeof content === 'string') {
+    return JSON.parse(content) as {
+      question?: string;
+      options?: { A: string; B: string; C: string; D: string };
+    };
+  }
 
-  return {
-    category: [categories.parent?.name || 'CS', categories.name],
-    difficulty: difficultyStr,
-    content: formatQuestionContent(question),
+  return content as {
+    question?: string;
+    options?: { A: string; B: string; C: string; D: string };
   };
+}
+
+/**
+ * 숫자 난이도를 문자열로 매핑
+ */
+function mapDifficulty(numDifficulty: number | null): string {
+  if (!numDifficulty) {
+    return 'medium';
+  }
+
+  if (numDifficulty <= 2) {
+    return 'easy';
+  }
+
+  if (numDifficulty === 3) {
+    return 'medium';
+  }
+
+  return 'hard';
 }
 
 /**
