@@ -5,10 +5,9 @@ import { GameSessionManager } from './game-session-manager';
 import { QuizService } from '../quiz/quiz.service';
 import { UserInfo } from './interfaces/user.interface';
 import { FinalResult, RoundData } from './interfaces/game.interfaces';
-import { GradeResult, RoundResult, Submission } from '../quiz/quiz.types';
+import { RoundResult } from '../quiz/quiz.types';
 import { SCORE_MAP, SPEED_BONUS } from '../quiz/quiz.constants';
 import { Match, Round, RoundAnswer } from '../match/entity';
-import { Question as QuestionEntity } from '../quiz/entity';
 
 @Injectable()
 export class GameService {
@@ -88,15 +87,8 @@ export class GameService {
   async processGrading(roomId: string): Promise<RoundResult> {
     const { question, submissions } = this.sessionManager.getGradingInput(roomId);
 
-    let gradeResults: GradeResult[];
-
-    if (question.questionType === 'multiple') {
-      gradeResults = this.gradeMultipleChoice(question, submissions);
-    } else {
-      // DB 엔티티를 게임 타입으로 변환하여 채점
-      const gameTypeQuestion = this.convertEntityToGameType(question);
-      gradeResults = await this.aiService.gradeSubjectiveQuestion(gameTypeQuestion, submissions);
-    }
+    // QuizService에 채점 위임
+    const gradeResults = await this.aiService.gradeQuestion(question, submissions);
 
     // 제출 시간 기반 보너스 계산 - 정답자 중 가장 빠른 사람 찾기
     const correctSubmissions = gradeResults
@@ -192,76 +184,6 @@ export class GameService {
   }
 
   /**
-   * 객관식 채점
-   */
-  private gradeMultipleChoice(question: QuestionEntity, submissions: Submission[]): GradeResult[] {
-    return submissions.map((sub) => {
-      const sanitizedAnswer = sub.answer.trim().toUpperCase();
-      const isCorrect = sanitizedAnswer === question.correctAnswer;
-
-      return {
-        playerId: sub.playerId,
-        answer: sub.answer,
-        isCorrect,
-        score: 0,
-        feedback: isCorrect ? 'Correct!' : `Wrong. The answer was ${question.correctAnswer}.`,
-      };
-    });
-  }
-
-  /**
-   * DB 엔티티를 게임 타입으로 변환 (채점용)
-   */
-  private convertEntityToGameType(entity: QuestionEntity) {
-    const difficulty = this.mapDifficulty(entity.difficulty);
-
-    if (entity.questionType === 'short') {
-      const questionText =
-        typeof entity.content === 'string' ? entity.content : JSON.stringify(entity.content);
-
-      return {
-        id: entity.id,
-        type: 'short_answer' as const,
-        question: questionText,
-        difficulty,
-        answer: entity.correctAnswer,
-      };
-    } else if (entity.questionType === 'essay') {
-      const questionText =
-        typeof entity.content === 'string' ? entity.content : JSON.stringify(entity.content);
-
-      return {
-        id: entity.id,
-        type: 'essay' as const,
-        question: questionText,
-        difficulty,
-        sampleAnswer: entity.correctAnswer,
-      };
-    }
-
-    throw new Error(`Cannot convert question type: ${entity.questionType as string}`);
-  }
-
-  /**
-   * 숫자 난이도를 문자열 난이도로 매핑
-   */
-  private mapDifficulty(numDifficulty: number | null): 'easy' | 'medium' | 'hard' {
-    if (!numDifficulty) {
-      return 'medium';
-    }
-
-    if (numDifficulty <= 2) {
-      return 'easy';
-    }
-
-    if (numDifficulty === 3) {
-      return 'medium';
-    }
-
-    return 'hard';
-  }
-
-  /**
    * 매치 종료 시 데이터베이스에 저장
    */
   async saveMatchToDatabase(roomId: string): Promise<void> {
@@ -318,5 +240,24 @@ export class GameService {
     }
 
     return parsed;
+  }
+
+  /**
+   * 숫자 난이도를 문자열 난이도로 매핑
+   */
+  private mapDifficulty(numDifficulty: number | null): 'easy' | 'medium' | 'hard' {
+    if (!numDifficulty) {
+      return 'medium';
+    }
+
+    if (numDifficulty <= 2) {
+      return 'easy';
+    }
+
+    if (numDifficulty === 3) {
+      return 'medium';
+    }
+
+    return 'hard';
   }
 }

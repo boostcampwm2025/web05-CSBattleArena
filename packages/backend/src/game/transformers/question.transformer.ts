@@ -6,14 +6,13 @@ import { Question as QuestionEntity } from '../../quiz/entity';
  */
 function transformQuestionForClient(
   question: QuestionEntity,
-  categories: { parent?: { name: string }; name: string },
+  category: string[],
 ): {
   category: string[];
   difficulty: string;
   type: string;
   content: { question: string; option: string[] } | { question: string };
 } {
-  const category = [categories.parent?.name || 'CS', categories.name];
   const difficulty = mapDifficulty(question.difficulty);
 
   switch (question.questionType) {
@@ -105,19 +104,4 @@ function mapDifficulty(numDifficulty: number | null): string {
   return 'hard';
 }
 
-/**
- * Category 조회 헬퍼 (QuizService에서 사용 예정)
- */
-function getCategoriesForQuestion(
-  _questionId: number,
-  // categoryQuestionRepo, categoryRepo를 주입받아야 함
-): { parent?: { name: string }; name: string } {
-  // TODO: 실제 구현은 QuizService에서 CategoryQuestion과 Category를 조회
-  // 임시로 기본값 반환
-  return {
-    parent: { name: 'Computer Science' },
-    name: 'Data Structures',
-  };
-}
-
-export { transformQuestionForClient, getCategoriesForQuestion };
+export { transformQuestionForClient };

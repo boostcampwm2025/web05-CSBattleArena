@@ -426,36 +426,89 @@ export class QuizService {
   }
 
   /**
-   * 카테고리 추출 (categoryQuestions에서 첫 번째 카테고리 사용)
-   * @returns [대주제, 소주제] 형태의 배열
+   * 카테고리 추출 (첫 번째 카테고리만 사용)
+   * @returns [카테고리명] 형태의 배열
    */
-  private extractCategory(entity: QuestionEntity): string[] | undefined {
-    if (!entity.categoryQuestions || entity.categoryQuestions.length === 0) {
-      return undefined;
+  public extractCategory(question: QuestionEntity): string[] {
+    if (!question.categoryQuestions || question.categoryQuestions.length === 0) {
+      return ['미분류'];
     }
 
-    const categoryQuestion = entity.categoryQuestions[0];
-    const category = categoryQuestion.category;
-
-    if (!category) {
-      return undefined;
-    }
-
-    // 소주제 (현재 카테고리)
-    const subCategory = category.name || '기타';
-
-    // 대주제 (부모 카테고리)
-    const mainCategory = category.parent?.name || '일반';
-
-    return [mainCategory, subCategory];
+    return [question.categoryQuestions[0].category.name];
   }
 
   /**
-   * 채점 (단답형, 서술형 AI 채점)
+   * 통합 채점 메서드 (객관식, 단답형, 서술형 모두 지원)
+   * - DB 엔티티를 받아서 타입에 따라 적절한 채점 수행
+   * - 객관식: 즉시 채점 (10점 또는 0점)
+   * - 단답형: AI 채점 (10점 또는 0점)
+   * - 서술형: AI 채점 (0~10점 부분 점수, 7점 이상 정답 처리)
+   */
+  async gradeQuestion(question: QuestionEntity, submissions: Submission[]): Promise<GradeResult[]> {
+    // 객관식은 즉시 채점
+    if (question.questionType === 'multiple') {
+      return this.gradeMultipleChoice(question, submissions);
+    }
+
+    // 단답형/서술형은 AI 채점
+    const gameTypeQuestion = this.convertEntityToGameType(question);
+
+    return this.gradeSubjectiveQuestion(gameTypeQuestion, submissions);
+  }
+
+  /**
+   * 객관식 채점 (내부 메서드)
+   */
+  private gradeMultipleChoice(question: QuestionEntity, submissions: Submission[]): GradeResult[] {
+    return submissions.map((sub) => {
+      const sanitizedAnswer = sub.answer.trim().toUpperCase();
+      const isCorrect = sanitizedAnswer === question.correctAnswer;
+
+      return {
+        playerId: sub.playerId,
+        answer: sub.answer,
+        isCorrect,
+        score: 0, // 점수는 GameService에서 계산
+        feedback: isCorrect ? 'Correct!' : `Wrong. The answer was ${question.correctAnswer}.`,
+      };
+    });
+  }
+
+  /**
+   * DB 엔티티를 게임 타입으로 변환 (채점용)
+   */
+  private convertEntityToGameType(entity: QuestionEntity): ShortAnswerQuestion | EssayQuestion {
+    const difficulty = this.mapDifficulty(entity.difficulty);
+    const questionText =
+      typeof entity.content === 'string' ? entity.content : JSON.stringify(entity.content);
+
+    if (entity.questionType === 'short') {
+      return {
+        id: entity.id,
+        type: 'short_answer',
+        question: questionText,
+        difficulty,
+        answer: entity.correctAnswer,
+      };
+    } else if (entity.questionType === 'essay') {
+      return {
+        id: entity.id,
+        type: 'essay',
+        question: questionText,
+        difficulty,
+        sampleAnswer: entity.correctAnswer,
+      };
+    }
+
+    throw new Error(`Cannot convert question type for grading: ${entity.questionType as string}`);
+  }
+
+  /**
+   * 단답형/서술형 채점 (AI 채점)
    * - 단답형: 10점 또는 0점
    * - 서술형: 0~10점 부분 점수, 7점 이상이면 정답 처리
    */
-  async gradeSubjectiveQuestion(
+  private async gradeSubjectiveQuestion(
     question: ShortAnswerQuestion | EssayQuestion,
     submissions: Submission[],
   ): Promise<GradeResult[]> {

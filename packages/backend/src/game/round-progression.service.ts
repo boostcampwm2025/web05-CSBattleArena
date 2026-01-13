@@ -2,12 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Server } from 'socket.io';
 import { RoundTimer } from './round-timer';
 import { GameService } from './game.service';
+import { QuizService } from '../quiz/quiz.service';
 import { GameSessionManager } from './game-session-manager';
 import { Difficulty, ROUND_DURATIONS } from './round-timer.constants';
-import {
-  getCategoriesForQuestion,
-  transformQuestionForClient,
-} from './transformers/question.transformer';
+import { transformQuestionForClient } from './transformers/question.transformer';
 
 @Injectable()
 export class RoundProgressionService {
@@ -17,6 +15,7 @@ export class RoundProgressionService {
   constructor(
     private readonly roundTimer: RoundTimer,
     private readonly gameService: GameService,
+    private readonly aiService: QuizService,
     private readonly sessionManager: GameSessionManager,
   ) {}
 
@@ -95,7 +94,7 @@ export class RoundProgressionService {
       const questionDuration = ROUND_DURATIONS.QUESTION[difficulty];
 
       // Question 변환 (transformer 사용)
-      const categories = getCategoriesForQuestion(question.id);
+      const categories = this.aiService.extractCategory(question);
       const transformedQuestion = transformQuestionForClient(question, categories);
 
       // round:start 이벤트 발송
