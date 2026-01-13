@@ -248,7 +248,7 @@ export class QuizService {
    * QuestionEntity를 quiz.types.ts의 Question 타입으로 변환
    * @throws {Error} JSON 파싱 실패 또는 유효하지 않은 데이터 형식
    */
-  private convertToQuizType(entity: QuestionEntity): Question {
+  public convertToQuizType(entity: QuestionEntity): Question {
     switch (entity.questionType) {
       case 'multiple':
         return this.convertToMultipleChoice(entity);

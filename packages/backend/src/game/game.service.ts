@@ -61,8 +61,9 @@ export class GameService {
     const questions = await this.aiService.getQuestionsForGame();
 
     const targetQuestion = questions[(roundData.roundNumber - 1) % questions.length];
+    const gameQuestion = this.aiService.convertToQuizType(targetQuestion);
 
-    this.sessionManager.setQuestion(roomId, targetQuestion);
+    this.sessionManager.setQuestion(roomId, gameQuestion);
 
     return this.sessionManager.getRoundData(roomId, roundData.roundNumber);
   }
