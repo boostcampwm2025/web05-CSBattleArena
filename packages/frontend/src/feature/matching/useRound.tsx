@@ -73,7 +73,7 @@ export function RoundProvider({ children }: { children: React.ReactNode }) {
 
   const handleRoundReady = useCallback((payload: RoundReady) => {
     setRoundState('preparing');
-    setEndTime(payload.startedAt + payload.durationSec);
+    setEndTime(payload.startedAt + payload.durationSec * 1000);
     setRemainedSec(payload.durationSec);
     setRoundIndex(payload.roundIndex);
     setTotalRounds(payload.totalRounds);
@@ -81,7 +81,7 @@ export function RoundProvider({ children }: { children: React.ReactNode }) {
 
   const handleRoundStart = useCallback((payload: RoundStart) => {
     setRoundState('playing');
-    setEndTime(payload.startedAt + payload.durationSec);
+    setEndTime(payload.startedAt + payload.durationSec * 1000);
     setRemainedSec(payload.durationSec);
     setCategory(payload.question.category);
     setDifficulty(payload.question.difficulty);
@@ -91,7 +91,7 @@ export function RoundProvider({ children }: { children: React.ReactNode }) {
   const handleRoundEnd = useCallback(
     (payload: RoundEnd) => {
       setRoundState('round-result');
-      setEndTime(payload.startedAt + payload.durationSec);
+      setEndTime(payload.startedAt + payload.durationSec * 1000);
       setRemainedSec(payload.durationSec);
       setMyAnswer(payload.result.my.submitted);
       setMyDelta(payload.result.my.delta);
@@ -132,7 +132,7 @@ export function RoundProvider({ children }: { children: React.ReactNode }) {
 
   const handleRoundTick = useCallback(
     (payload: RoundTick) => {
-      setRemainedSec(Math.max(0, endTime - payload.curServerTime));
+      setRemainedSec(Math.max(0, Math.floor(endTime - payload.curServerTime)));
     },
     [endTime],
   );
