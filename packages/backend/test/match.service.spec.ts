@@ -160,10 +160,10 @@ describe('GameService', () => {
             });
             mockSessionManager.getGameSession.mockReturnValue(mockSession);
 
-            // Mock gradeQuestion return
+            // Mock gradeQuestion return - 객관식은 정답 10점, 오답 0점
             mockAiService.gradeQuestion.mockResolvedValue([
-                { playerId: mockP1, answer: 'A', isCorrect: true, score: 0, feedback: '' },
-                { playerId: mockP2, answer: 'B', isCorrect: false, score: 0, feedback: '' },
+                { playerId: mockP1, answer: 'A', isCorrect: true, score: 10, feedback: 'Correct!' },
+                { playerId: mockP2, answer: 'B', isCorrect: false, score: 0, feedback: 'Wrong' },
             ]);
 
             // Execute
@@ -173,13 +173,14 @@ describe('GameService', () => {
             // 1. 객관식은 로컬 채점이지만 gradeQuestion 메서드는 호출됨
             expect(aiService.gradeQuestion).toHaveBeenCalled();
 
-            // 2. 점수 부여 확인 (P1은 정답이므로 medium 점수 + 스피드 보너스)
+            // 2. 점수 부여 확인
+            // P1은 AI 만점(10점) → (10/10) * 20(medium) = 20점 + 스피드보너스 5점 = 25점
             expect(sessionManager.addScore).toHaveBeenCalledWith(
                 mockRoomId,
                 mockP1,
-                SCORE_MAP['medium'] + SPEED_BONUS,
+                25,
             );
-            // P2는 오답이므로 호출 안됨 (또는 0점 로직에 따라 다름, 현재 코드는 if(isCorrect)일때만 호출)
+            // P2는 오답이므로 호출 안됨
             expect(sessionManager.addScore).toHaveBeenCalledTimes(1);
 
             // 3. 결과 구조 확인
@@ -206,14 +207,14 @@ describe('GameService', () => {
             });
             mockSessionManager.getGameSession.mockReturnValue(mockSession);
 
-            // AI Mock Return
+            // AI Mock Return - AI가 만점(10점) 부여
             mockAiService.gradeQuestion.mockResolvedValue([
                 {
                     playerId: mockP1,
                     isCorrect: true,
-                    feedback: 'Good',
+                    feedback: 'Perfect!',
                     answer: 'Gemini',
-                    score: 0,
+                    score: 10,
                 },
             ]);
 
@@ -222,10 +223,11 @@ describe('GameService', () => {
 
             // Verify
             expect(aiService.gradeQuestion).toHaveBeenCalled();
+            // AI 만점(10점) → (10/10) * 30(hard) = 30점 + 스피드보너스 5점 = 35점
             expect(sessionManager.addScore).toHaveBeenCalledWith(
                 mockRoomId,
                 mockP1,
-                SCORE_MAP['hard'] + SPEED_BONUS,
+                35,
             );
         });
 
@@ -241,28 +243,30 @@ describe('GameService', () => {
             });
             mockSessionManager.getGameSession.mockReturnValue(mockSession);
 
-            // Mock gradeQuestion return
+            // Mock gradeQuestion return - 둘 다 AI 만점(10점)
             mockAiService.gradeQuestion.mockResolvedValue([
-                { playerId: mockP1, answer: 'A', isCorrect: true, score: 0, feedback: '' },
-                { playerId: mockP2, answer: 'A', isCorrect: true, score: 0, feedback: '' },
+                { playerId: mockP1, answer: 'A', isCorrect: true, score: 10, feedback: 'Correct!' },
+                { playerId: mockP2, answer: 'A', isCorrect: true, score: 10, feedback: 'Correct!' },
             ]);
 
             // Execute
             const result: any = await service.submitAnswer(mockRoomId, mockP1, 'A');
 
             // Verify: P1은 정답 + 스피드 보너스, P2는 정답만
+            // P1: (10/10) * 20(medium) = 20점 + 스피드보너스 5점 = 25점
             expect(sessionManager.addScore).toHaveBeenCalledWith(
                 mockRoomId,
                 mockP1,
-                SCORE_MAP['medium'] + SPEED_BONUS,
+                25,
             );
+            // P2: (10/10) * 20(medium) = 20점 (스피드보너스 없음)
             expect(sessionManager.addScore).toHaveBeenCalledWith(
                 mockRoomId,
                 mockP2,
-                SCORE_MAP['medium'],
+                20,
             );
-            expect(result.grades[0].score).toBe(SCORE_MAP['medium'] + SPEED_BONUS);
-            expect(result.grades[1].score).toBe(SCORE_MAP['medium']);
+            expect(result.grades[0].score).toBe(25);
+            expect(result.grades[1].score).toBe(20);
         });
 
         it('오답자는 더 빨리 제출해도 보너스를 받지 못한다', async () => {
@@ -279,8 +283,8 @@ describe('GameService', () => {
 
             // Mock gradeQuestion return
             mockAiService.gradeQuestion.mockResolvedValue([
-                { playerId: mockP1, answer: 'B', isCorrect: false, score: 0, feedback: '' },
-                { playerId: mockP2, answer: 'A', isCorrect: true, score: 0, feedback: '' },
+                { playerId: mockP1, answer: 'B', isCorrect: false, score: 0, feedback: 'Wrong' },
+                { playerId: mockP2, answer: 'A', isCorrect: true, score: 10, feedback: 'Correct!' },
             ]);
 
             // Execute
@@ -288,13 +292,14 @@ describe('GameService', () => {
 
             // Verify: P2만 스피드 보너스 받음 (정답자 중 가장 빨리 제출)
             expect(sessionManager.addScore).toHaveBeenCalledTimes(1);
+            // P2: (10/10) * 20(medium) = 20점 + 스피드보너스 5점 = 25점
             expect(sessionManager.addScore).toHaveBeenCalledWith(
                 mockRoomId,
                 mockP2,
-                SCORE_MAP['medium'] + SPEED_BONUS,
+                25,
             );
             expect(result.grades[0].score).toBe(0);
-            expect(result.grades[1].score).toBe(SCORE_MAP['medium'] + SPEED_BONUS);
+            expect(result.grades[1].score).toBe(25);
         });
     });
 
