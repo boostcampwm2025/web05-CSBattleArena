@@ -140,7 +140,7 @@ export default function MatchResult() {
                     </p>
                   </div>
                   {result.question.difficulty === 'Easy' && (
-                    <div className="border-2 border-green-300 bg-green-500 px-4 py-2">
+                    <div className="border-2 border-green-300 bg-green-500 px-2 py-1">
                       <p
                         className="text-sm font-bold text-white"
                         style={{ fontFamily: 'Orbitron' }}
@@ -150,7 +150,7 @@ export default function MatchResult() {
                     </div>
                   )}
                   {result.question.difficulty === 'Medium' && (
-                    <div className="border-2 border-yellow-300 bg-yellow-500 px-4 py-2">
+                    <div className="border-2 border-yellow-300 bg-yellow-500 px-2 py-1">
                       <p
                         className="text-sm font-bold text-white"
                         style={{ fontFamily: 'Orbitron' }}
@@ -160,7 +160,7 @@ export default function MatchResult() {
                     </div>
                   )}
                   {result.question.difficulty === 'Hard' && (
-                    <div className="border-2 border-red-300 bg-red-500 px-4 py-2">
+                    <div className="border-2 border-red-300 bg-red-500 px-2 py-1">
                       <p
                         className="text-sm font-bold text-white"
                         style={{ fontFamily: 'Orbitron' }}
