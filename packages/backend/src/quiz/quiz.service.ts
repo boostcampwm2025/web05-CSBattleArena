@@ -472,7 +472,7 @@ export class QuizService {
         playerId: sub.playerId,
         answer: sub.answer,
         isCorrect,
-        score: 0, // 점수는 GameService에서 계산
+        score: isCorrect ? 10 : 0, // 객관식은 맞으면 10점 (만점), 틀리면 0점
         feedback: isCorrect ? 'Correct!' : `Wrong. The answer was ${question.correctAnswer}.`,
       };
     });
