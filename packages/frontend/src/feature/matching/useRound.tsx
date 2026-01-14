@@ -73,7 +73,7 @@ export function RoundProvider({ children }: { children: React.ReactNode }) {
   const handleRoundReady = useCallback((payload: RoundReady) => {
     setRoundState('preparing');
     setRemainedSec(payload.durationSec);
-    setRoundIndex(payload.roundIndex);
+    setRoundIndex(payload.roundIndex + 1);
     setTotalRounds(payload.totalRounds);
   }, []);
 
