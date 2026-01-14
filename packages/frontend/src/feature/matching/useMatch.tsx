@@ -17,6 +17,7 @@ type RoundResult = {
   index: number;
   question: {
     category: string[];
+    point: number;
     difficulty: 'Easy' | 'Medium' | 'Hard';
     content: QuestionContent;
   };

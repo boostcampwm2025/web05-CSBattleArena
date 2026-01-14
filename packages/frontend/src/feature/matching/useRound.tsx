@@ -26,6 +26,7 @@ type RoundTickAPI = {
 type QuestionAPI = {
   category: string[];
   difficulty: 'Easy' | 'Medium' | 'Hard';
+  point: number;
   content: QuestionContent;
 };
 
@@ -54,6 +55,7 @@ export function RoundProvider({ children }: { children: React.ReactNode }) {
   const [remainedSec, setRemainedSec] = useState<number>(0);
   const [category, setCategory] = useState<string[]>([]);
   const [difficulty, setDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>('Easy');
+  const [point, setPoint] = useState<number>(0);
   const [content, setContent] = useState<QuestionContent>(null);
   const [myAnswer, setMyAnswer] = useState<string>('');
   const [myDelta, setMyDelta] = useState<number>(0);
@@ -82,6 +84,7 @@ export function RoundProvider({ children }: { children: React.ReactNode }) {
     setRemainedSec(payload.durationSec);
     setCategory(payload.question.category);
     setDifficulty(payload.question.difficulty);
+    setPoint(payload.question.point);
     setContent(payload.question.content);
   }, []);
 
@@ -113,6 +116,7 @@ export function RoundProvider({ children }: { children: React.ReactNode }) {
             index: roundIndex,
             question: {
               category,
+              point,
               difficulty,
               content,
             },
@@ -123,7 +127,7 @@ export function RoundProvider({ children }: { children: React.ReactNode }) {
         ],
       }));
     },
-    [roundIndex, category, difficulty, content, setMatchResult],
+    [roundIndex, category, point, difficulty, content, setMatchResult],
   );
 
   const handleRoundTick = useCallback((payload: RoundTick) => {
@@ -155,7 +159,7 @@ export function RoundProvider({ children }: { children: React.ReactNode }) {
       }}
     >
       <RoundTickCtx.Provider value={{ remainedSec }}>
-        <QuestionCtx.Provider value={{ category, difficulty, content }}>
+        <QuestionCtx.Provider value={{ category, difficulty, content, point }}>
           <RoundScoreCtx.Provider
             value={{
               myAnswer,

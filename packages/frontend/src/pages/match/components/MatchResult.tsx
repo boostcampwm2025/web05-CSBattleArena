@@ -136,7 +136,7 @@ export default function MatchResult() {
                   </div>
                   <div className="border-2 border-emerald-300 bg-emerald-500 px-2 py-1">
                     <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                      100 PTS
+                      {result.question.point} PTS
                     </p>
                   </div>
                   {result.question.difficulty === 'Easy' && (

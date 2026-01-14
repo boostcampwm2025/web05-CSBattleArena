@@ -23,6 +23,7 @@ export type RoundStart = {
   question: {
     category: string[];
     difficulty: 'Easy' | 'Medium' | 'Hard';
+    point: number;
     content:
       | { type: 'multiple'; question: string; option: string[] }
       | { type: 'short'; question: string }

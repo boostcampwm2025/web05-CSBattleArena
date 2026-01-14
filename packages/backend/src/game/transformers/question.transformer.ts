@@ -1,4 +1,5 @@
 import { Question as QuestionEntity } from '../../quiz/entity';
+import { SCORE_MAP } from '../../quiz/quiz.constants';
 
 /**
  * DB Question 엔티티를 클라이언트 API 형식으로 변환
@@ -10,12 +11,14 @@ function transformQuestionForClient(
 ): {
   category: string[];
   difficulty: string;
+  point: number;
   content:
     | { type: 'multiple'; question: string; option: string[] }
     | { type: 'short'; question: string }
     | { type: 'essay'; question: string };
 } {
   const difficulty = mapDifficulty(question.difficulty);
+  const point = getPointScore(question.difficulty);
 
   switch (question.questionType) {
     case 'multiple': {
@@ -24,6 +27,7 @@ function transformQuestionForClient(
       return {
         category,
         difficulty,
+        point,
         content: {
           type: 'multiple',
           question: content.question || '',
@@ -41,6 +45,7 @@ function transformQuestionForClient(
       return {
         category,
         difficulty,
+        point,
         content: {
           type: 'short',
           question: questionText,
@@ -55,6 +60,7 @@ function transformQuestionForClient(
       return {
         category,
         difficulty,
+        point,
         content: {
           type: 'essay',
           question: questionText,
@@ -104,6 +110,25 @@ function mapDifficulty(numDifficulty: number | null): string {
   }
 
   return 'Hard';
+}
+
+/**
+ * 난이도에 따른 만점 점수 계산
+ */
+function getPointScore(numDifficulty: number | null): number {
+  if (!numDifficulty) {
+    return SCORE_MAP.medium;
+  }
+
+  if (numDifficulty <= 2) {
+    return SCORE_MAP.easy;
+  }
+
+  if (numDifficulty === 3) {
+    return SCORE_MAP.medium;
+  }
+
+  return SCORE_MAP.hard;
 }
 
 export { transformQuestionForClient };

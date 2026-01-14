@@ -2,7 +2,7 @@ import { useQuestion, useRoundTick } from '@/feature/matching/useRound';
 import { usePlaying } from '@/pages/match/hooks/usePlaying';
 
 export default function Playing() {
-  const { category, difficulty, content } = useQuestion();
+  const { category, difficulty, point, content } = useQuestion();
   const { remainedSec } = useRoundTick();
   const { isSubmit, isSubmitting, setAnswer, onClickSubmitBtn } = usePlaying();
 
@@ -25,7 +25,7 @@ export default function Playing() {
               </div>
               <div className="border-2 border-emerald-300 bg-emerald-500 px-4 py-2">
                 <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                  100 PTS
+                  {point} PTS
                 </p>
               </div>
               {difficulty === 'Easy' && (
