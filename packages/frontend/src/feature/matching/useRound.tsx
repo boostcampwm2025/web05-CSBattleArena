@@ -26,6 +26,7 @@ type RoundTickAPI = {
 type QuestionAPI = {
   category: string[];
   difficulty: 'Easy' | 'Medium' | 'Hard';
+  point: number;
   content: QuestionContent;
 };
 
@@ -51,10 +52,10 @@ export function RoundProvider({ children }: { children: React.ReactNode }) {
   const [roundState, setRoundState] = useState<RoundState>('preparing');
   const [roundIndex, setRoundIndex] = useState<number>(0);
   const [totalRounds, setTotalRounds] = useState<number>(0);
-  const [endTime, setEndTime] = useState<number>(0);
   const [remainedSec, setRemainedSec] = useState<number>(0);
   const [category, setCategory] = useState<string[]>([]);
   const [difficulty, setDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>('Easy');
+  const [point, setPoint] = useState<number>(0);
   const [content, setContent] = useState<QuestionContent>(null);
   const [myAnswer, setMyAnswer] = useState<string>('');
   const [myDelta, setMyDelta] = useState<number>(0);
@@ -73,42 +74,40 @@ export function RoundProvider({ children }: { children: React.ReactNode }) {
 
   const handleRoundReady = useCallback((payload: RoundReady) => {
     setRoundState('preparing');
-    setEndTime(payload.startedAt + payload.durationSec * 1000);
     setRemainedSec(payload.durationSec);
-    setRoundIndex(payload.roundIndex);
+    setRoundIndex(payload.roundIndex + 1);
     setTotalRounds(payload.totalRounds);
   }, []);
 
   const handleRoundStart = useCallback((payload: RoundStart) => {
     setRoundState('playing');
-    setEndTime(payload.startedAt + payload.durationSec * 1000);
     setRemainedSec(payload.durationSec);
     setCategory(payload.question.category);
     setDifficulty(payload.question.difficulty);
+    setPoint(payload.question.point);
     setContent(payload.question.content);
   }, []);
 
   const handleRoundEnd = useCallback(
     (payload: RoundEnd) => {
       setRoundState('round-result');
-      setEndTime(payload.startedAt + payload.durationSec * 1000);
       setRemainedSec(payload.durationSec);
-      setMyAnswer(payload.result.my.submitted);
-      setMyDelta(payload.result.my.delta);
-      setMyTotal(payload.result.my.total);
-      setMyIsCorrect(payload.result.my.correct);
-      setOpponentAnswer(payload.result.opponent.submitted);
-      setOpponentDelta(payload.result.opponent.delta);
-      setOpponentTotal(payload.result.opponent.total);
-      setOpponentIsCorrect(payload.result.opponent.correct);
+      setMyAnswer(payload.results.my.submitted);
+      setMyDelta(payload.results.my.delta);
+      setMyTotal(payload.results.my.total);
+      setMyIsCorrect(payload.results.my.correct);
+      setOpponentAnswer(payload.results.opponent.submitted);
+      setOpponentDelta(payload.results.opponent.delta);
+      setOpponentTotal(payload.results.opponent.total);
+      setOpponentIsCorrect(payload.results.opponent.correct);
       setBestAnswer(payload.solution.bestAnswer);
       setExplanation(payload.solution.explanation);
 
       setMatchResult((prev) => ({
-        myTotalPoints: payload.result.my.total,
-        myWinCount: payload.result.my.correct ? prev.myWinCount + 1 : prev.myWinCount,
-        opponentTotalPoints: payload.result.opponent.total,
-        opponentWinCount: payload.result.opponent.correct
+        myTotalPoints: payload.results.my.total,
+        myWinCount: payload.results.my.correct ? prev.myWinCount + 1 : prev.myWinCount,
+        opponentTotalPoints: payload.results.opponent.total,
+        opponentWinCount: payload.results.opponent.correct
           ? prev.opponentWinCount + 1
           : prev.opponentWinCount,
         roundResults: [
@@ -117,25 +116,23 @@ export function RoundProvider({ children }: { children: React.ReactNode }) {
             index: roundIndex,
             question: {
               category,
+              point,
               difficulty,
               content,
             },
-            myAnswer: payload.result.my.submitted,
-            opponentAnswer: payload.result.opponent.submitted,
+            myAnswer: payload.results.my.submitted,
+            opponentAnswer: payload.results.opponent.submitted,
             bestAnswer: payload.solution.bestAnswer,
           },
         ],
       }));
     },
-    [roundIndex, category, difficulty, content, setMatchResult],
+    [roundIndex, category, point, difficulty, content, setMatchResult],
   );
 
-  const handleRoundTick = useCallback(
-    (payload: RoundTick) => {
-      setRemainedSec(Math.max(0, Math.floor(endTime - payload.curServerTime)));
-    },
-    [endTime],
-  );
+  const handleRoundTick = useCallback((payload: RoundTick) => {
+    setRemainedSec(payload.remainedSec);
+  }, []);
 
   useEffect(() => {
     const socket = socketRef.current;
@@ -162,7 +159,7 @@ export function RoundProvider({ children }: { children: React.ReactNode }) {
       }}
     >
       <RoundTickCtx.Provider value={{ remainedSec }}>
-        <QuestionCtx.Provider value={{ category, difficulty, content }}>
+        <QuestionCtx.Provider value={{ category, difficulty, content, point }}>
           <RoundScoreCtx.Provider
             value={{
               myAnswer,

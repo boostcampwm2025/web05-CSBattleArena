@@ -426,15 +426,19 @@ export class QuizService {
   }
 
   /**
-   * 카테고리 추출 (첫 번째 카테고리만 사용)
-   * @returns [카테고리명] 형태의 배열
+   * 카테고리 추출 (상위, 하위 카테고리)
+   * @returns [상위카테고리, 하위카테고리] 형태의 배열
    */
   public extractCategory(question: QuestionEntity): string[] {
     if (!question.categoryQuestions || question.categoryQuestions.length === 0) {
-      return ['미분류'];
+      return ['미분류', '미분류'];
     }
 
-    return [question.categoryQuestions[0].category.name];
+    const category = question.categoryQuestions[0].category;
+    const parentName = category.parent?.name || '미분류';
+    const childName = category.name;
+
+    return [parentName, childName];
   }
 
   /**
@@ -468,7 +472,7 @@ export class QuizService {
         playerId: sub.playerId,
         answer: sub.answer,
         isCorrect,
-        score: 0, // 점수는 GameService에서 계산
+        score: isCorrect ? 10 : 0, // 객관식은 맞으면 10점 (만점), 틀리면 0점
         feedback: isCorrect ? 'Correct!' : `Wrong. The answer was ${question.correctAnswer}.`,
       };
     });

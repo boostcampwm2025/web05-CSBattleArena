@@ -136,11 +136,11 @@ export default function MatchResult() {
                   </div>
                   <div className="border-2 border-emerald-300 bg-emerald-500 px-2 py-1">
                     <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                      100 PTS
+                      {result.question.point} PTS
                     </p>
                   </div>
                   {result.question.difficulty === 'Easy' && (
-                    <div className="border-2 border-green-300 bg-green-500 px-4 py-2">
+                    <div className="border-2 border-green-300 bg-green-500 px-2 py-1">
                       <p
                         className="text-sm font-bold text-white"
                         style={{ fontFamily: 'Orbitron' }}
@@ -150,7 +150,7 @@ export default function MatchResult() {
                     </div>
                   )}
                   {result.question.difficulty === 'Medium' && (
-                    <div className="border-2 border-yellow-300 bg-yellow-500 px-4 py-2">
+                    <div className="border-2 border-yellow-300 bg-yellow-500 px-2 py-1">
                       <p
                         className="text-sm font-bold text-white"
                         style={{ fontFamily: 'Orbitron' }}
@@ -160,7 +160,7 @@ export default function MatchResult() {
                     </div>
                   )}
                   {result.question.difficulty === 'Hard' && (
-                    <div className="border-2 border-red-300 bg-red-500 px-4 py-2">
+                    <div className="border-2 border-red-300 bg-red-500 px-2 py-1">
                       <p
                         className="text-sm font-bold text-white"
                         style={{ fontFamily: 'Orbitron' }}
@@ -177,8 +177,19 @@ export default function MatchResult() {
                   style={{ fontFamily: 'Orbitron' }}
                 >
                   {result.question.content?.question}
-                  {result.question.content?.type === 'multiple' &&
-                    `\n\nA: ${result.question.content.option[0]}\nB: ${result.question.content.option[1]}\nC: ${result.question.content.option[2]}\nD: ${result.question.content.option[3]}`}
+                  {result.question.content?.type === 'multiple' && (
+                    <span>
+                      <br />
+                      <br />
+                      {`A: ${result.question.content?.option[0]}`}
+                      <br />
+                      {`B: ${result.question.content?.option[1]}`}
+                      <br />
+                      {`C: ${result.question.content?.option[2]}`}
+                      <br />
+                      {`D: ${result.question.content?.option[3]}`}
+                    </span>
+                  )}
                 </div>
 
                 {/* Players Answer */}
@@ -233,7 +244,7 @@ export default function MatchResult() {
               REMATCH
             </button>
             <button
-              className="w-full border-4 border-red-300 bg-gradient-to-r from-red-500 to-rose-500 p-2 text-2xl font-bold text-white shadow-lg shadow-red-500/50 transition-all duration-200 hover:scale-105 hover:from-cyan-400 hover:to-rose-400"
+              className="w-full border-4 border-red-300 bg-gradient-to-r from-red-500 to-rose-500 p-2 text-2xl font-bold text-white shadow-lg shadow-red-500/50 transition-all duration-200 hover:scale-105 hover:from-red-400 hover:to-rose-400"
               style={{ fontFamily: 'Orbitron' }}
               onClick={onClickExitBtn}
               disabled={isClickedExitBtn}

@@ -65,7 +65,6 @@ export class GameSessionManager {
     roomId: string,
     player1Id: string,
     player1SocketId: string,
-
     player1Info: UserInfo,
     player2Id: string,
     player2SocketId: string,
