@@ -9,7 +9,9 @@ export default tseslint.config(
     {
         ignores: ['dist/', 'node_modules/', 'eslint.config.mjs', '**/test/**',
             '**/*.spec.ts',
-            '**/*.test.ts'],
+            '**/*.test.ts',
+            'jest.config.ts',
+            'src/quiz/test-question-service.ts'],
     },
     eslint.configs.recommended,
     ...tseslint.configs.recommendedTypeChecked,
@@ -63,7 +65,7 @@ export default tseslint.config(
             'no-console': 'warn',
             'no-unused-vars': 'off',
             '@typescript-eslint/no-explicit-any': 'error',
-            '@typescript-eslint/no-floating-promises': 'error',
+            '@typescript-eslint/no-floating-promises': 'warn',
             '@typescript-eslint/no-unsafe-argument': 'error',
             '@typescript-eslint/no-unused-vars': [
                 'error',

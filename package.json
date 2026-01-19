@@ -6,31 +6,36 @@
   "scripts": {
     "dev": "pnpm -r --parallel dev",
     "build": "pnpm -r build",
+    "build:backend": "pnpm --filter @web05-boostcamp/backend build",
+    "build:frontend": "pnpm --filter @web05-boostcamp/frontend build",
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
     "clean": "pnpm -r clean",
     "prepare": "husky"
   },
   "devDependencies": {
-    "eslint-plugin-import": "^2.32.0",
-    "globals": "^16.5.0",
     "husky": "^9.1.7",
-    "lint-staged": "^16.2.7",
-    "prettier-plugin-tailwindcss": "^0.7.2",
-    "typescript": "^5.3.3",
-    "typescript-eslint": "^8.50.0"
+    "lint-staged": "^16.2.7"
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx}": [
-      "eslint --fix",
-      "prettier --write"
+    "packages/backend/**/*.{ts,js}": [
+      "pnpm --filter @web05-boostcamp/backend lint"
     ],
-    "*.{json,md,css,html}": [
-      "prettier --write"
+    "packages/frontend/**/*.{ts,tsx,js,jsx}": [
+      "pnpm --filter @web05-boostcamp/frontend lint"
     ]
   },
   "engines": {
     "node": ">=18.0.0",
-    "pnpm": ">=8.0.0"
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@10.19.0",
+  "dependencies": {
+    "@nestjs/config": "^4.0.2",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.3",
+    "nest-winston": "^1.10.2",
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0"
   }
 }
