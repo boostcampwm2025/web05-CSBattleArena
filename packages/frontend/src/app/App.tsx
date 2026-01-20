@@ -9,6 +9,7 @@ import { MatchProvider } from '@/feature/matching/useMatch';
 
 import Home from '@/pages/home/Home';
 import Match from '@/pages/match/Match';
+import SinglePlay from '@/pages/single-play/SinglePlay';
 import ProblemBank from '@/pages/problem-bank/ProblemBank';
 
 export default function App() {
@@ -26,6 +27,8 @@ export default function App() {
           <Match />
         </MatchProvider>
       );
+    case 'single-play':
+      return <SinglePlay />;
     case 'problem-bank':
       return <ProblemBank />;
   }

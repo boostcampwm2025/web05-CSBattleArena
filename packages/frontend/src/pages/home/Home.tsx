@@ -16,6 +16,10 @@ export default function Home() {
     setScene('match');
   };
 
+  const onClickSinglePlayBtn = () => {
+    setScene('single-play');
+  };
+
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Retro grid background */}
@@ -81,7 +85,7 @@ export default function Home() {
 
           {/* Self Study Button */}
           <button
-            onClick={() => {}}
+            onClick={onClickSinglePlayBtn}
             className="border-4 border-purple-300 bg-gradient-to-r from-purple-500 to-indigo-500 py-4 text-2xl font-bold text-white shadow-lg shadow-purple-500/50 transition-all duration-200 hover:scale-105 hover:from-purple-400 hover:to-indigo-400"
             style={{ fontFamily: 'Orbitron' }}
           >
