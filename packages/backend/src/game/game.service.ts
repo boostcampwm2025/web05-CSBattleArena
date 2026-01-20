@@ -6,7 +6,7 @@ import { QuizService } from '../quiz/quiz.service';
 import { UserInfo } from './interfaces/user.interface';
 import { FinalResult, RoundData } from './interfaces/game.interfaces';
 import { RoundResult } from '../quiz/quiz.types';
-import { SCORE_MAP, SPEED_BONUS } from '../quiz/quiz.constants';
+import { mapDifficulty, SCORE_MAP, SPEED_BONUS } from '../quiz/quiz.constants';
 import { Match, Round, RoundAnswer } from '../match/entity';
 
 @Injectable()
@@ -106,7 +106,7 @@ export class GameService {
         : null;
 
     // 점수 반영
-    const difficulty = this.mapDifficulty(question.difficulty);
+    const difficulty = mapDifficulty(question.difficulty);
     const finalGrades = gradeResults.map((grade) => {
       let score = 0;
 
@@ -243,29 +243,9 @@ export class GameService {
     const parsed = parseInt(userId, 10);
 
     if (isNaN(parsed)) {
-      // userId가 숫자가 아니면 임시로 0 반환 (실제 환경에서는 적절히 처리)
-      return 0;
+      throw new Error(`Invalid userId: ${userId}`);
     }
 
     return parsed;
-  }
-
-  /**
-   * 숫자 난이도를 문자열 난이도로 매핑
-   */
-  private mapDifficulty(numDifficulty: number | null): 'easy' | 'medium' | 'hard' {
-    if (!numDifficulty) {
-      return 'medium';
-    }
-
-    if (numDifficulty <= 2) {
-      return 'easy';
-    }
-
-    if (numDifficulty === 3) {
-      return 'medium';
-    }
-
-    return 'hard';
   }
 }
