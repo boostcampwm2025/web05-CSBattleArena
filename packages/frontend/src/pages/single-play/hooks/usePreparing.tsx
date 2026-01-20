@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { usePhase } from '@/feature/single-play/useRound';
-import { useRound, useQuestion, useResult } from '@/feature/single-play/useRound';
+import { useQuestion, useResult, useRound } from '@/feature/single-play/useRound';
 
 import { CategoryItem } from '@/pages/single-play/types/types';
 import { fetchCategories, fetchQuestions } from '@/lib/api/single-play';
@@ -104,7 +104,16 @@ export function usePreparing() {
     } finally {
       setIsLoadingQuestions(false);
     }
-  }, [setPhase]);
+  }, [
+    selectedCategoryId,
+    setPhase,
+    setCurRound,
+    setTotalRounds,
+    setQuestions,
+    setSubmitAnswers,
+    setCorrectCnt,
+    setTotalPoints,
+  ]);
 
   return {
     categories,

@@ -9,7 +9,7 @@ export type Question =
   | {
       id: number;
       type: 'multiple_choice';
-      qustion: string;
+      question: string;
       difficulty: Difficulty;
       category: string[];
       options: MultipleChoiceOptions;

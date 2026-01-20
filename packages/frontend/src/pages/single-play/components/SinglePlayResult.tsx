@@ -1,4 +1,12 @@
+import { useUser } from '@/feature/auth/useUser';
+import { useQuestion, useResult, useRound } from '@/feature/single-play/useRound';
+
 export default function SinglePlayResult() {
+  const { userData } = useUser();
+  const { curRound } = useRound();
+  const { questions } = useQuestion();
+  const { submitAnswers, correctCnt, totalPoints } = useResult();
+
   return (
     <div className="relative z-10 flex h-full w-full flex-col items-center justify-center p-10">
       <div className="flex h-full w-full max-w-6xl flex-col items-stretch justify-center gap-10">
@@ -18,13 +26,13 @@ export default function SinglePlayResult() {
               </div>
               <div className="flex flex-col text-left">
                 <div className="text-lg font-bold text-cyan-300" style={{ fontFamily: 'Orbitron' }}>
-                  CodeMaster
+                  {userData?.nickname}
                 </div>
                 <div
                   className="text-2xl font-bold text-emerald-400"
                   style={{ fontFamily: 'Orbitron' }}
                 >
-                  100 PTS
+                  {totalPoints} PTS
                 </div>
               </div>
             </div>
@@ -33,7 +41,7 @@ export default function SinglePlayResult() {
                 className="text-base font-bold text-cyan-300"
                 style={{ fontFamily: 'Orbitron' }}
               >
-                1 Correct
+                {correctCnt} Correct
               </span>
             </div>
           </div>
@@ -50,397 +58,116 @@ export default function SinglePlayResult() {
           </h2>
           {/* Scroll Area */}
           <div className="flex flex-col items-stretch justify-start gap-2 overflow-y-auto bg-gradient-to-r from-slate-800/95 to-slate-900/95 pr-4 shadow-purple-500/30">
-            {/* Question */}
-            <div className="flex flex-col items-stretch justify-center gap-2 border-2 border-slate-600 bg-slate-700/50 p-2">
-              {/* Question Info */}
-              <div className="flex items-center gap-2">
-                <div className="border-2 border-purple-300 bg-purple-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Q1
-                  </p>
+            {questions.map((q, index) => (
+              <div className="flex flex-col items-stretch justify-center gap-2 border-2 border-slate-600 bg-slate-700/50 p-2">
+                {/* Question Info */}
+                <div className="flex items-center gap-2">
+                  <div className="border-2 border-purple-300 bg-purple-500 px-2 py-1">
+                    <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
+                      Q{index + 1}
+                    </p>
+                  </div>
+                  <div className="border-2 border-cyan-300 bg-cyan-500 px-2 py-1">
+                    <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
+                      {q.category[0]}
+                    </p>
+                  </div>
+                  <div className="border-2 border-amber-300 bg-amber-500 px-2 py-1">
+                    <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
+                      {q.category[1]}
+                    </p>
+                  </div>
+                  <div className="border-2 border-emerald-300 bg-emerald-500 px-2 py-1">
+                    <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
+                      100 PTS
+                    </p>
+                  </div>
+                  {q.difficulty === 'easy' && (
+                    <div className="border-2 border-green-300 bg-green-500 px-2 py-1">
+                      <p
+                        className="text-sm font-bold text-white"
+                        style={{ fontFamily: 'Orbitron' }}
+                      >
+                        Easy
+                      </p>
+                    </div>
+                  )}
+                  {q.difficulty === 'medium' && (
+                    <div className="border-2 border-yellow-300 bg-yellow-500 px-2 py-1">
+                      <p
+                        className="text-sm font-bold text-white"
+                        style={{ fontFamily: 'Orbitron' }}
+                      >
+                        Medium
+                      </p>
+                    </div>
+                  )}
+                  {q.difficulty === 'hard' && (
+                    <div className="border-2 border-red-300 bg-red-500 px-2 py-1">
+                      <p
+                        className="text-sm font-bold text-white"
+                        style={{ fontFamily: 'Orbitron' }}
+                      >
+                        Hard
+                      </p>
+                    </div>
+                  )}
                 </div>
-                <div className="border-2 border-cyan-300 bg-cyan-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Algorithm
-                  </p>
-                </div>
-                <div className="border-2 border-amber-300 bg-amber-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Binary Search
-                  </p>
-                </div>
-                <div className="border-2 border-emerald-300 bg-emerald-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    100 PTS
-                  </p>
-                </div>
-                <div className="border-2 border-green-300 bg-green-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Easy
-                  </p>
-                </div>
-              </div>
 
-              {/* Question Content */}
-              <div
-                className="text-lg leading-relaxed text-white"
-                style={{ fontFamily: 'Orbitron' }}
-              >
-                Question Content
-              </div>
-
-              {/* Players Answer */}
-              <div className="flex gap-4 text-xs">
+                {/* Question Content */}
                 <div
-                  className={
-                    'flex w-full flex-col gap-1 border border-emerald-400 bg-emerald-500/20 p-2'
-                  }
-                >
-                  <div className="font-bold text-cyan-300" style={{ fontFamily: 'Orbitron' }}>
-                    You:
-                  </div>
-                  <div className="text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Answer
-                  </div>
-                </div>
-              </div>
-
-              {/* Best Answer */}
-              <div className="gap-1 border border-amber-400 bg-amber-500/20 p-2">
-                <span
-                  className="text-xs font-bold text-amber-400"
+                  className="text-lg leading-relaxed text-white"
                   style={{ fontFamily: 'Orbitron' }}
                 >
-                  <i className="ri-lightbulb-line mr-1" />
-                  Answer: BestAnswer
-                </span>
-              </div>
-            </div>
-            <div className="flex flex-col items-stretch justify-center gap-2 border-2 border-slate-600 bg-slate-700/50 p-2">
-              {/* Question Info */}
-              <div className="flex items-center gap-2">
-                <div className="border-2 border-purple-300 bg-purple-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Q1
-                  </p>
+                  {q.type === 'multiple_choice' ? (
+                    <span>
+                      {q.question}
+                      <br />
+                      <br />
+                      {`A: ${q.options.A}`}
+                      <br />
+                      {`B: ${q.options.B}`}
+                      <br />
+                      {`C: ${q.options.C}`}
+                      <br />
+                      {`D: ${q.options.D}`}
+                    </span>
+                  ) : (
+                    <span>{q.question}</span>
+                  )}
                 </div>
-                <div className="border-2 border-cyan-300 bg-cyan-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Algorithm
-                  </p>
-                </div>
-                <div className="border-2 border-amber-300 bg-amber-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Binary Search
-                  </p>
-                </div>
-                <div className="border-2 border-emerald-300 bg-emerald-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    100 PTS
-                  </p>
-                </div>
-                <div className="border-2 border-green-300 bg-green-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Easy
-                  </p>
-                </div>
-              </div>
 
-              {/* Question Content */}
-              <div
-                className="text-lg leading-relaxed text-white"
-                style={{ fontFamily: 'Orbitron' }}
-              >
-                Question Content
-              </div>
-
-              {/* Players Answer */}
-              <div className="flex gap-4 text-xs">
-                <div
-                  className={
-                    'flex w-full flex-col gap-1 border border-emerald-400 bg-emerald-500/20 p-2'
-                  }
-                >
-                  <div className="font-bold text-cyan-300" style={{ fontFamily: 'Orbitron' }}>
-                    You:
-                  </div>
-                  <div className="text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Answer
+                {/* Players Answer */}
+                <div className="flex gap-4 text-xs">
+                  <div
+                    className={
+                      'flex w-full flex-col gap-1 border border-emerald-400 bg-emerald-500/20 p-2'
+                    }
+                  >
+                    <div className="font-bold text-cyan-300" style={{ fontFamily: 'Orbitron' }}>
+                      You:
+                    </div>
+                    <div className="text-white" style={{ fontFamily: 'Orbitron' }}>
+                      {submitAnswers[index]}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Best Answer */}
-              <div className="gap-1 border border-amber-400 bg-amber-500/20 p-2">
-                <span
-                  className="text-xs font-bold text-amber-400"
-                  style={{ fontFamily: 'Orbitron' }}
-                >
-                  <i className="ri-lightbulb-line mr-1" />
-                  Answer: BestAnswer
-                </span>
-              </div>
-            </div>
-            <div className="flex flex-col items-stretch justify-center gap-2 border-2 border-slate-600 bg-slate-700/50 p-2">
-              {/* Question Info */}
-              <div className="flex items-center gap-2">
-                <div className="border-2 border-purple-300 bg-purple-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Q1
-                  </p>
-                </div>
-                <div className="border-2 border-cyan-300 bg-cyan-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Algorithm
-                  </p>
-                </div>
-                <div className="border-2 border-amber-300 bg-amber-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Binary Search
-                  </p>
-                </div>
-                <div className="border-2 border-emerald-300 bg-emerald-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    100 PTS
-                  </p>
-                </div>
-                <div className="border-2 border-green-300 bg-green-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Easy
-                  </p>
+                {/* Best Answer */}
+                <div className="gap-1 border border-amber-400 bg-amber-500/20 p-2">
+                  <span
+                    className="text-xs font-bold text-amber-400"
+                    style={{ fontFamily: 'Orbitron' }}
+                  >
+                    <i className="ri-lightbulb-line mr-1" />
+                    Answer:
+                    {questions[curRound].type === 'multiple_choice' && questions[curRound].answer}
+                    {questions[curRound].type === 'short_answer' && questions[curRound].answer}
+                    {questions[curRound].type === 'essay' && questions[curRound].sampleAnswer}
+                  </span>
                 </div>
               </div>
-
-              {/* Question Content */}
-              <div
-                className="text-lg leading-relaxed text-white"
-                style={{ fontFamily: 'Orbitron' }}
-              >
-                Question Content
-              </div>
-
-              {/* Players Answer */}
-              <div className="flex gap-4 text-xs">
-                <div
-                  className={
-                    'flex w-full flex-col gap-1 border border-emerald-400 bg-emerald-500/20 p-2'
-                  }
-                >
-                  <div className="font-bold text-cyan-300" style={{ fontFamily: 'Orbitron' }}>
-                    You:
-                  </div>
-                  <div className="text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Answer
-                  </div>
-                </div>
-              </div>
-
-              {/* Best Answer */}
-              <div className="gap-1 border border-amber-400 bg-amber-500/20 p-2">
-                <span
-                  className="text-xs font-bold text-amber-400"
-                  style={{ fontFamily: 'Orbitron' }}
-                >
-                  <i className="ri-lightbulb-line mr-1" />
-                  Answer: BestAnswer
-                </span>
-              </div>
-            </div>
-            <div className="flex flex-col items-stretch justify-center gap-2 border-2 border-slate-600 bg-slate-700/50 p-2">
-              {/* Question Info */}
-              <div className="flex items-center gap-2">
-                <div className="border-2 border-purple-300 bg-purple-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Q1
-                  </p>
-                </div>
-                <div className="border-2 border-cyan-300 bg-cyan-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Algorithm
-                  </p>
-                </div>
-                <div className="border-2 border-amber-300 bg-amber-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Binary Search
-                  </p>
-                </div>
-                <div className="border-2 border-emerald-300 bg-emerald-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    100 PTS
-                  </p>
-                </div>
-                <div className="border-2 border-green-300 bg-green-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Easy
-                  </p>
-                </div>
-              </div>
-
-              {/* Question Content */}
-              <div
-                className="text-lg leading-relaxed text-white"
-                style={{ fontFamily: 'Orbitron' }}
-              >
-                Question Content
-              </div>
-
-              {/* Players Answer */}
-              <div className="flex gap-4 text-xs">
-                <div
-                  className={
-                    'flex w-full flex-col gap-1 border border-emerald-400 bg-emerald-500/20 p-2'
-                  }
-                >
-                  <div className="font-bold text-cyan-300" style={{ fontFamily: 'Orbitron' }}>
-                    You:
-                  </div>
-                  <div className="text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Answer
-                  </div>
-                </div>
-              </div>
-
-              {/* Best Answer */}
-              <div className="gap-1 border border-amber-400 bg-amber-500/20 p-2">
-                <span
-                  className="text-xs font-bold text-amber-400"
-                  style={{ fontFamily: 'Orbitron' }}
-                >
-                  <i className="ri-lightbulb-line mr-1" />
-                  Answer: BestAnswer
-                </span>
-              </div>
-            </div>
-            <div className="flex flex-col items-stretch justify-center gap-2 border-2 border-slate-600 bg-slate-700/50 p-2">
-              {/* Question Info */}
-              <div className="flex items-center gap-2">
-                <div className="border-2 border-purple-300 bg-purple-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Q1
-                  </p>
-                </div>
-                <div className="border-2 border-cyan-300 bg-cyan-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Algorithm
-                  </p>
-                </div>
-                <div className="border-2 border-amber-300 bg-amber-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Binary Search
-                  </p>
-                </div>
-                <div className="border-2 border-emerald-300 bg-emerald-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    100 PTS
-                  </p>
-                </div>
-                <div className="border-2 border-green-300 bg-green-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Easy
-                  </p>
-                </div>
-              </div>
-
-              {/* Question Content */}
-              <div
-                className="text-lg leading-relaxed text-white"
-                style={{ fontFamily: 'Orbitron' }}
-              >
-                Question Content
-              </div>
-
-              {/* Players Answer */}
-              <div className="flex gap-4 text-xs">
-                <div
-                  className={
-                    'flex w-full flex-col gap-1 border border-emerald-400 bg-emerald-500/20 p-2'
-                  }
-                >
-                  <div className="font-bold text-cyan-300" style={{ fontFamily: 'Orbitron' }}>
-                    You:
-                  </div>
-                  <div className="text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Answer
-                  </div>
-                </div>
-              </div>
-
-              {/* Best Answer */}
-              <div className="gap-1 border border-amber-400 bg-amber-500/20 p-2">
-                <span
-                  className="text-xs font-bold text-amber-400"
-                  style={{ fontFamily: 'Orbitron' }}
-                >
-                  <i className="ri-lightbulb-line mr-1" />
-                  Answer: BestAnswer
-                </span>
-              </div>
-            </div>
-            <div className="flex flex-col items-stretch justify-center gap-2 border-2 border-slate-600 bg-slate-700/50 p-2">
-              {/* Question Info */}
-              <div className="flex items-center gap-2">
-                <div className="border-2 border-purple-300 bg-purple-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Q1
-                  </p>
-                </div>
-                <div className="border-2 border-cyan-300 bg-cyan-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Algorithm
-                  </p>
-                </div>
-                <div className="border-2 border-amber-300 bg-amber-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Binary Search
-                  </p>
-                </div>
-                <div className="border-2 border-emerald-300 bg-emerald-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    100 PTS
-                  </p>
-                </div>
-                <div className="border-2 border-green-300 bg-green-500 px-2 py-1">
-                  <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Easy
-                  </p>
-                </div>
-              </div>
-
-              {/* Question Content */}
-              <div
-                className="text-lg leading-relaxed text-white"
-                style={{ fontFamily: 'Orbitron' }}
-              >
-                Question Content
-              </div>
-
-              {/* Players Answer */}
-              <div className="flex gap-4 text-xs">
-                <div
-                  className={
-                    'flex w-full flex-col gap-1 border border-emerald-400 bg-emerald-500/20 p-2'
-                  }
-                >
-                  <div className="font-bold text-cyan-300" style={{ fontFamily: 'Orbitron' }}>
-                    You:
-                  </div>
-                  <div className="text-white" style={{ fontFamily: 'Orbitron' }}>
-                    Answer
-                  </div>
-                </div>
-              </div>
-
-              {/* Best Answer */}
-              <div className="gap-1 border border-amber-400 bg-amber-500/20 p-2">
-                <span
-                  className="text-xs font-bold text-amber-400"
-                  style={{ fontFamily: 'Orbitron' }}
-                >
-                  <i className="ri-lightbulb-line mr-1" />
-                  Answer: BestAnswer
-                </span>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 

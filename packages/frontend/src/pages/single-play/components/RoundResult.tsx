@@ -1,4 +1,12 @@
+import { useUser } from '@/feature/auth/useUser';
+import { useQuestion, useResult, useRound } from '@/feature/single-play/useRound';
+
 export default function RoundResult() {
+  const { userData } = useUser();
+  const { curRound } = useRound();
+  const { questions } = useQuestion();
+  const { submitAnswers } = useResult();
+
   return (
     <div className="flex h-full items-center justify-center">
       <div className="flex w-full max-w-6xl flex-col gap-6">
@@ -6,7 +14,7 @@ export default function RoundResult() {
           className="bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-center text-4xl font-black text-transparent"
           style={{ fontFamily: '"Press Start 2P"' }}
         >
-          ROUND 1 RESULT
+          ROUND {curRound + 1} RESULT
         </div>
 
         {/* Player Answer */}
@@ -16,7 +24,7 @@ export default function RoundResult() {
               <i className="ri-user-star-line text-2xl text-white" />
             </div>
             <div className="text-lg font-bold text-cyan-300" style={{ fontFamily: 'Orbitron' }}>
-              CodeMaster
+              {userData?.nickname}
             </div>
           </div>
           <div className="flex flex-col gap-3">
@@ -24,7 +32,7 @@ export default function RoundResult() {
               YOUR ANSWER
             </div>
             <div className="text-base text-white" style={{ fontFamily: 'Orbitron' }}>
-              Hello
+              {submitAnswers[curRound]}
             </div>
           </div>
           <div className="border-2 border-emerald-400 bg-emerald-500/20 py-2 text-center">
@@ -41,7 +49,9 @@ export default function RoundResult() {
             CORRECT ANSWER
           </div>
           <div className="text-base text-white" style={{ fontFamily: 'Orbitron' }}>
-            Best Answer
+            {questions[curRound].type === 'multiple_choice' && questions[curRound].answer}
+            {questions[curRound].type === 'short_answer' && questions[curRound].answer}
+            {questions[curRound].type === 'essay' && questions[curRound].sampleAnswer}
           </div>
         </div>
 

@@ -1,4 +1,9 @@
+import { useQuestion, useRound } from '@/feature/single-play/useRound';
+
 export default function Playing() {
+  const { curRound } = useRound();
+  const { questions } = useQuestion();
+
   return (
     <div className="flex h-full items-center justify-center">
       <div className="flex w-full max-w-6xl flex-col gap-10">
@@ -6,7 +11,7 @@ export default function Playing() {
           className="bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-center text-4xl font-black text-transparent"
           style={{ fontFamily: '"Press Start 2P"' }}
         >
-          ROUND 1
+          ROUND {curRound + 1}
         </div>
 
         {/* Question Card */}
@@ -15,12 +20,12 @@ export default function Playing() {
             <div className="flex items-center gap-4">
               <div className="border-2 border-purple-300 bg-purple-500 px-4 py-2">
                 <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                  Algorithm
+                  {questions[curRound].category[0]}
                 </p>
               </div>
               <div className="border-2 border-amber-300 bg-amber-500 px-4 py-2">
                 <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                  Binary Search
+                  {questions[curRound].category[1]}
                 </p>
               </div>
               <div className="border-2 border-emerald-300 bg-emerald-500 px-4 py-2">
@@ -30,14 +35,29 @@ export default function Playing() {
               </div>
               <div className="border-2 border-green-300 bg-green-500 px-4 py-2">
                 <p className="text-sm font-bold text-white" style={{ fontFamily: 'Orbitron' }}>
-                  Easy
+                  {questions[curRound].difficulty}
                 </p>
               </div>
             </div>
           </div>
 
           <div className="text-xl leading-relaxed text-white" style={{ fontFamily: 'Orbitron' }}>
-            What is the time complexity of binary search algorithm?
+            {questions[curRound].type === 'multiple_choice' ? (
+              <span>
+                {questions[curRound].question}
+                <br />
+                <br />
+                {`A: ${questions[curRound].options.A}`}
+                <br />
+                {`B: ${questions[curRound].options.B}`}
+                <br />
+                {`C: ${questions[curRound].options.C}`}
+                <br />
+                {`D: ${questions[curRound].options.D}`}
+              </span>
+            ) : (
+              <span>{questions[curRound].question}</span>
+            )}
           </div>
 
           {/* Answer Input */}
