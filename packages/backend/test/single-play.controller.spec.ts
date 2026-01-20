@@ -66,7 +66,7 @@ describe('SinglePlayController', () => {
 
   describe('getQuestions', () => {
     it('단일 카테고리 ID로 문제를 정상적으로 반환해야 함', async () => {
-      const query: GetQuestionsDto = { categoryId: '1' };
+      const query: GetQuestionsDto = { categoryId: [1] };
       const mockQuestions = [
         { id: 1, questionType: 'multiple', content: 'What is React?', difficulty: 2 },
         { id: 2, questionType: 'short', content: 'Explain Node.js', difficulty: 3 },
@@ -80,8 +80,8 @@ describe('SinglePlayController', () => {
       expect(mockSinglePlayService.getQuestions).toHaveBeenCalledWith([1]);
     });
 
-    it('쉼표로 구분된 여러 카테고리 ID를 파싱해야 함', async () => {
-      const query: GetQuestionsDto = { categoryId: '1,2,3' };
+    it('여러 카테고리 ID를 배열로 전달받아야 함', async () => {
+      const query: GetQuestionsDto = { categoryId: [1, 2, 3] };
       const mockQuestions = [
         { id: 1, questionType: 'multiple', content: 'Question 1', difficulty: 2 },
       ];
@@ -94,31 +94,8 @@ describe('SinglePlayController', () => {
       expect(mockSinglePlayService.getQuestions).toHaveBeenCalledWith([1, 2, 3]);
     });
 
-    it('공백이 있는 카테고리 ID도 정상 파싱해야 함', async () => {
-      const query: GetQuestionsDto = { categoryId: '1, 2, 3' };
-      const mockQuestions = [];
-
-      mockSinglePlayService.getQuestions.mockResolvedValue(mockQuestions);
-
-      await controller.getQuestions(query);
-
-      expect(mockSinglePlayService.getQuestions).toHaveBeenCalledWith([1, 2, 3]);
-    });
-
-    it('유효하지 않은 숫자는 필터링해야 함', async () => {
-      const query: GetQuestionsDto = { categoryId: '1,abc,2,xyz' };
-      const mockQuestions = [];
-
-      mockSinglePlayService.getQuestions.mockResolvedValue(mockQuestions);
-
-      await controller.getQuestions(query);
-
-      // 'abc', 'xyz'는 제외되고 [1, 2]만 전달
-      expect(mockSinglePlayService.getQuestions).toHaveBeenCalledWith([1, 2]);
-    });
-
     it('빈 문제 배열도 정상적으로 반환해야 함', async () => {
-      const query: GetQuestionsDto = { categoryId: '1' };
+      const query: GetQuestionsDto = { categoryId: [1] };
 
       mockSinglePlayService.getQuestions.mockResolvedValue([]);
 
@@ -128,7 +105,7 @@ describe('SinglePlayController', () => {
     });
 
     it('Service 계층의 에러를 그대로 전파해야 함', async () => {
-      const query: GetQuestionsDto = { categoryId: '999' };
+      const query: GetQuestionsDto = { categoryId: [999] };
       const error = new Error('Category not found');
 
       mockSinglePlayService.getQuestions.mockRejectedValue(error);
