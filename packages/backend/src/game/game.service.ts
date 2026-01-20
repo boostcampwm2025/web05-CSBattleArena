@@ -1,13 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { GameSessionManager } from './game-session-manager';
 import { QuizService } from '../quiz/quiz.service';
 import { UserInfo } from './interfaces/user.interface';
-import { FinalResult, RoundData } from './interfaces/game.interfaces';
+import { FinalResult, GameSession, RoundData } from './interfaces/game.interfaces';
 import { RoundResult } from '../quiz/quiz.types';
 import { mapDifficulty, SCORE_MAP, SPEED_BONUS } from '../quiz/quiz.constants';
 import { Match, Round, RoundAnswer } from '../match/entity';
+import { UserProblemBank } from '../problem-bank/entity';
 
 @Injectable()
 export class GameService {
@@ -20,7 +21,7 @@ export class GameService {
     private readonly answerRepo: Repository<RoundAnswer>,
     private readonly connection: DataSource,
     private readonly sessionManager: GameSessionManager,
-    private readonly aiService: QuizService,
+    private readonly quizService: QuizService,
   ) {}
 
   /**
@@ -58,7 +59,7 @@ export class GameService {
     const roundData = this.sessionManager.startNextRound(roomId);
 
     // DB에서 Question 엔티티 조회
-    const questions = await this.aiService.getQuestionsForGame();
+    const questions = await this.quizService.getQuestionsForGame();
 
     const targetQuestion = questions[(roundData.roundNumber - 1) % questions.length];
 
@@ -88,7 +89,7 @@ export class GameService {
     const { question, submissions } = this.sessionManager.getGradingInput(roomId);
 
     // QuizService에 채점 위임
-    const gradeResults = await this.aiService.gradeQuestion(question, submissions);
+    const gradeResults = await this.quizService.gradeQuestion(question, submissions);
 
     // 제출 시간 기반 보너스 계산 - 정답자 중 가장 빠른 사람 찾기
     const correctSubmissions = gradeResults
@@ -191,53 +192,190 @@ export class GameService {
     };
   }
 
+  // ============================================
+  // Database Persistence
+  // ============================================
+
   /**
-   * 매치 종료 시 데이터베이스에 저장
+   * 매치 종료 후 DB에 결과 저장 (Batch INSERT)
    */
   async saveMatchToDatabase(roomId: string): Promise<void> {
     const session = this.sessionManager.getGameSession(roomId);
     const finalResult = this.calculateFinalResult(roomId);
 
     await this.connection.transaction(async (manager) => {
-      // 1. Match 엔티티 생성
-      const match = manager.create(Match, {
+      const matchId = await this.insertMatch(manager, session, finalResult);
+      const roundIdMap = await this.insertRounds(manager, matchId, session);
+      await this.insertRoundAnswers(manager, roundIdMap, session);
+      await this.insertUserProblemBanks(manager, matchId, session);
+    });
+  }
+
+  /**
+   * Match 테이블에 INSERT
+   */
+  private async insertMatch(
+    manager: EntityManager,
+    session: GameSession,
+    finalResult: FinalResult,
+  ): Promise<number> {
+    const result = await manager
+      .createQueryBuilder()
+      .insert()
+      .into(Match)
+      .values({
         player1Id: this.parseUserId(session.player1Id),
         player2Id: this.parseUserId(session.player2Id),
         winnerId: finalResult.winnerId ? this.parseUserId(finalResult.winnerId) : null,
         matchType: 'multi',
-      });
-      const savedMatch = await manager.save(match);
+      })
+      .returning('id')
+      .execute();
 
-      // 2. 모든 Round 및 RoundAnswer 저장
-      for (const [roundNum, roundData] of session.rounds.entries()) {
-        const round = manager.create(Round, {
-          matchId: savedMatch.id,
-          questionId: roundData.questionId,
-          roundNumber: roundNum,
-        });
-        const savedRound = await manager.save(round);
-
-        // 3. 각 플레이어의 RoundAnswer 저장
-        for (const [playerId, submission] of Object.entries(roundData.submissions)) {
-          if (!submission) {
-            continue;
-          }
-
-          const grade = roundData.result.grades.find((g) => g.playerId === playerId);
-
-          const roundAnswer = manager.create(RoundAnswer, {
-            userId: this.parseUserId(playerId),
-            roundId: savedRound.id,
-            userAnswer: submission.answer || '',
-            score: grade.score,
-            answerStatus: grade.isCorrect ? 'correct' : 'incorrect',
-            aiFeedback: grade.feedback,
-          });
-          await manager.save(roundAnswer);
-        }
-      }
-    });
+    return result.generatedMaps[0].id;
   }
+
+  /**
+   * Rounds 테이블에 Bulk INSERT
+   */
+  private async insertRounds(
+    manager: EntityManager,
+    matchId: number,
+    session: GameSession,
+  ): Promise<Map<number, number>> {
+    const roundsData = Array.from(session.rounds.entries()).map(([roundNum, roundData]) => ({
+      matchId,
+      questionId: roundData.questionId,
+      roundNumber: roundNum,
+    }));
+
+    const result = await manager
+      .createQueryBuilder()
+      .insert()
+      .into(Round)
+      .values(roundsData)
+      .returning(['id', 'roundNumber'])
+      .execute();
+
+    const roundIdMap = new Map<number, number>();
+    result.generatedMaps.forEach((r) => {
+      roundIdMap.set(r.roundNumber, r.id);
+    });
+
+    return roundIdMap;
+  }
+
+  /**
+   * RoundAnswers 테이블에 Bulk INSERT
+   */
+  private async insertRoundAnswers(
+    manager: EntityManager,
+    roundIdMap: Map<number, number>,
+    session: GameSession,
+  ): Promise<void> {
+    const answersData = this.prepareRoundAnswersData(roundIdMap, session);
+
+    if (answersData.length > 0) {
+      await manager.createQueryBuilder().insert().into(RoundAnswer).values(answersData).execute();
+    }
+  }
+
+  /**
+   * RoundAnswers INSERT용 데이터 준비
+   */
+  private prepareRoundAnswersData(
+    roundIdMap: Map<number, number>,
+    session: GameSession,
+  ): Partial<RoundAnswer>[] {
+    const answersData: Partial<RoundAnswer>[] = [];
+
+    for (const [roundNum, roundData] of session.rounds.entries()) {
+      const roundId = roundIdMap.get(roundNum);
+      const questionType = roundData.question?.questionType;
+
+      for (const [playerId, submission] of Object.entries(roundData.submissions)) {
+        if (!submission) continue;
+
+        const grade = roundData.result?.grades.find((g) => g.playerId === playerId);
+        if (!grade) continue;
+
+        answersData.push({
+          userId: this.parseUserId(playerId),
+          roundId,
+          userAnswer: submission.answer || '',
+          score: grade.score,
+          answerStatus: this.quizService.determineAnswerStatus(
+            questionType,
+            grade.isCorrect,
+            grade.score,
+          ),
+          aiFeedback: grade.feedback,
+        });
+      }
+    }
+
+    return answersData;
+  }
+
+  /**
+   * UserProblemBanks 테이블에 Bulk INSERT
+   */
+  private async insertUserProblemBanks(
+    manager: EntityManager,
+    matchId: number,
+    session: GameSession,
+  ): Promise<void> {
+    const problemBanksData = this.prepareProblemBanksData(matchId, session);
+
+    if (problemBanksData.length > 0) {
+      await manager
+        .createQueryBuilder()
+        .insert()
+        .into(UserProblemBank)
+        .values(problemBanksData)
+        .execute();
+    }
+  }
+
+  /**
+   * UserProblemBanks INSERT용 데이터 준비
+   */
+  private prepareProblemBanksData(
+    matchId: number,
+    session: GameSession,
+  ): Partial<UserProblemBank>[] {
+    const problemBanksData: Partial<UserProblemBank>[] = [];
+
+    for (const [, roundData] of session.rounds.entries()) {
+      const questionType = roundData.question?.questionType;
+
+      for (const [playerId, submission] of Object.entries(roundData.submissions)) {
+        if (!submission) continue;
+
+        const grade = roundData.result?.grades.find((g) => g.playerId === playerId);
+        if (!grade) continue;
+
+        problemBanksData.push({
+          userId: this.parseUserId(playerId),
+          questionId: roundData.questionId,
+          matchId,
+          userAnswer: submission.answer || '',
+          answerStatus: this.quizService.determineAnswerStatus(
+            questionType,
+            grade.isCorrect,
+            grade.score,
+          ),
+          aiFeedback: grade.feedback,
+        });
+      }
+    }
+
+    return problemBanksData;
+  }
+
+  // ============================================
+  // Utilities
+  // ============================================
 
   private parseUserId(userId: string): number {
     const parsed = parseInt(userId, 10);
