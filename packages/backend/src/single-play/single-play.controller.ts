@@ -32,13 +32,7 @@ export class SinglePlayController {
    */
   @Get('questions')
   async getQuestions(@Query(ValidationPipe) query: GetQuestionsDto) {
-    // 쉼표로 구분된 categoryId를 배열로 변환
-    const categoryIds = query.categoryId
-      .split(',')
-      .map((id) => parseInt(id.trim(), 10))
-      .filter((id) => !isNaN(id));
-
-    const questions = await this.singlePlayService.getQuestions(categoryIds);
+    const questions = await this.singlePlayService.getQuestions(query.categoryId);
 
     return { questions };
   }
