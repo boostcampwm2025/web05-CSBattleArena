@@ -1,12 +1,14 @@
 import { useUser } from '@/feature/auth/useUser';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 
 export function useHome() {
   const { userData } = useUser();
+
+  const [isOpenLoginModal, setIsOpenLoginModal] = useState<boolean>(true);
 
   const onClickMyPageBtn = useCallback(() => {}, []);
 
   const onClickLogoutBtn = useCallback(() => {}, []);
 
-  return { userData, onClickMyPageBtn, onClickLogoutBtn };
+  return { userData, isOpenLoginModal, setIsOpenLoginModal, onClickMyPageBtn, onClickLogoutBtn };
 }

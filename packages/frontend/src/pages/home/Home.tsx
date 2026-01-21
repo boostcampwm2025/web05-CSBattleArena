@@ -3,8 +3,11 @@ import { useState } from 'react';
 import { useScene } from '@/feature/useScene.tsx';
 import { useHome } from './hooks/useHome';
 
+import LoginModal from './components/LoginModal';
+
 export default function Home() {
-  const { userData, onClickMyPageBtn, onClickLogoutBtn } = useHome();
+  const { userData, isOpenLoginModal, setIsOpenLoginModal, onClickMyPageBtn, onClickLogoutBtn } =
+    useHome();
   const { setScene } = useScene();
 
   const [isDisabled, setIsDisabled] = useState<boolean>(false);
@@ -192,6 +195,8 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {isOpenLoginModal && <LoginModal onClose={() => setIsOpenLoginModal(false)} />}
     </div>
   );
 }
