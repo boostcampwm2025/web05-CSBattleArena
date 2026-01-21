@@ -31,12 +31,15 @@ export class ProblemBankService {
       .leftJoinAndSelect('q.categoryQuestions', 'cq')
       .leftJoinAndSelect('cq.category', 'c')
       .leftJoinAndSelect('c.parent', 'parent')
-      .leftJoinAndSelect('pb.match', 'm')
       .where('pb.userId = :userId', { userId });
 
     // 필터 적용
     if (query.categoryIds && query.categoryIds.length > 0) {
-      queryBuilder.andWhere('c.id IN (:...categoryIds)', { categoryIds: query.categoryIds });
+      // 대분류 ID를 전달하면 해당 대분류의 모든 소분류도 포함
+      // 소분류 ID를 전달하면 해당 소분류만 필터링
+      queryBuilder.andWhere('(c.id IN (:...categoryIds) OR c.parentId IN (:...categoryIds))', {
+        categoryIds: query.categoryIds,
+      });
     }
 
     if (query.difficulty) {
@@ -72,30 +75,36 @@ export class ProblemBankService {
       .take(limit)
       .getMany();
 
-    // 통계 계산
-    const statistics = await this.getStatistics(userId);
-
     // DTO로 변환
     const itemDtos = items.map((item) => this.transformToDto(item));
 
     return {
       items: itemDtos,
-      statistics,
       totalPages,
       currentPage: page,
     };
   }
 
   async getStatistics(userId: number): Promise<ProblemBankStatisticsDto> {
-    const allProblems = await this.problemBankRepository.find({
-      where: { userId },
-      select: ['answerStatus'],
-    });
+    // DB에서 집계 쿼리로 한 번에 계산
+    const result = await this.problemBankRepository
+      .createQueryBuilder('pb')
+      .select('COUNT(*)', 'totalSolved')
+      .addSelect("SUM(CASE WHEN pb.answerStatus = 'correct' THEN 1 ELSE 0 END)", 'correctCount')
+      .addSelect("SUM(CASE WHEN pb.answerStatus = 'incorrect' THEN 1 ELSE 0 END)", 'incorrectCount')
+      .addSelect("SUM(CASE WHEN pb.answerStatus = 'partial' THEN 1 ELSE 0 END)", 'partialCount')
+      .where('pb.userId = :userId', { userId })
+      .getRawOne<{
+        totalSolved: string;
+        correctCount: string;
+        incorrectCount: string;
+        partialCount: string;
+      }>();
 
-    const totalSolved = allProblems.length;
-    const correctCount = allProblems.filter((p) => p.answerStatus === 'correct').length;
-    const incorrectCount = allProblems.filter((p) => p.answerStatus === 'incorrect').length;
-    const partialCount = allProblems.filter((p) => p.answerStatus === 'partial').length;
+    const totalSolved = Number(result?.totalSolved) || 0;
+    const correctCount = Number(result?.correctCount) || 0;
+    const incorrectCount = Number(result?.incorrectCount) || 0;
+    const partialCount = Number(result?.partialCount) || 0;
     const correctRate = totalSolved > 0 ? (correctCount / totalSolved) * 100 : 0;
 
     return {
@@ -193,7 +202,7 @@ export class ProblemBankService {
       userAnswer: item.userAnswer || '',
       correctAnswer: item.question.correctAnswer,
       aiFeedback: item.aiFeedback || '',
-      solvedAt: new Date().toISOString(), // Match 엔티티에 timestamp 없음
+      solvedAt: item.createdAt?.toISOString() ?? new Date().toISOString(),
     };
   }
 }

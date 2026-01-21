@@ -22,7 +22,6 @@ export class ProblemBankStatisticsDto {
 
 export class ProblemBankResponseDto {
   items: ProblemBankItemDto[];
-  statistics: ProblemBankStatisticsDto;
   totalPages: number;
   currentPage: number;
 }
