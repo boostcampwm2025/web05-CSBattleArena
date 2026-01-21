@@ -4,10 +4,15 @@ import { Repository } from 'typeorm';
 
 import { ClovaClientService } from './clova/clova-client.service';
 import { Category, Question as QuestionEntity } from './entity';
-import { QUIZ_CONSTANTS, QUIZ_ERROR_MESSAGES, QUIZ_LOG_MESSAGES } from './quiz.constants';
+import {
+  mapDifficulty,
+  QUIZ_CONSTANTS,
+  QUIZ_ERROR_MESSAGES,
+  QUIZ_LOG_MESSAGES,
+  SCORE_MAP,
+} from './quiz.constants';
 import { QUIZ_PROMPTS } from './quiz-prompts';
 import {
-  Difficulty,
   EssayQuestion,
   GradeResult,
   MultipleChoiceOptions,
@@ -280,7 +285,7 @@ export class QuizService {
         id: entity.id,
         type: 'multiple_choice',
         question: contentData.question,
-        difficulty: this.mapDifficulty(entity.difficulty),
+        difficulty: mapDifficulty(entity.difficulty),
         category: this.extractCategory(entity),
         options: contentData.options,
         answer: entity.correctAnswer,
@@ -310,7 +315,7 @@ export class QuizService {
       id: entity.id,
       type: 'short_answer',
       question: questionText,
-      difficulty: this.mapDifficulty(entity.difficulty),
+      difficulty: mapDifficulty(entity.difficulty),
       category: this.extractCategory(entity),
       answer: entity.correctAnswer,
     };
@@ -332,7 +337,7 @@ export class QuizService {
       id: entity.id,
       type: 'essay',
       question: questionText,
-      difficulty: this.mapDifficulty(entity.difficulty),
+      difficulty: mapDifficulty(entity.difficulty),
       category: this.extractCategory(entity),
       sampleAnswer: entity.correctAnswer,
     };
@@ -406,26 +411,6 @@ export class QuizService {
   }
 
   /**
-   * 숫자 난이도를 문자열 난이도로 매핑
-   * 1-2: easy, 3: medium, 4-5: hard
-   */
-  private mapDifficulty(numDifficulty: number | null): Difficulty {
-    if (!numDifficulty) {
-      return 'medium';
-    }
-
-    if (numDifficulty <= 2) {
-      return 'easy';
-    }
-
-    if (numDifficulty === 3) {
-      return 'medium';
-    }
-
-    return 'hard';
-  }
-
-  /**
    * 카테고리 추출 (상위, 하위 카테고리)
    * @returns [상위카테고리, 하위카테고리] 형태의 배열
    */
@@ -482,7 +467,7 @@ export class QuizService {
    * DB 엔티티를 게임 타입으로 변환 (채점용)
    */
   private convertEntityToGameType(entity: QuestionEntity): ShortAnswerQuestion | EssayQuestion {
-    const difficulty = this.mapDifficulty(entity.difficulty);
+    const difficulty = mapDifficulty(entity.difficulty);
     const questionText =
       typeof entity.content === 'string' ? entity.content : JSON.stringify(entity.content);
 
@@ -675,5 +660,29 @@ export class QuizService {
     }
 
     return 'incorrect';
+  }
+
+  /**
+   * AI 점수를 난이도별 게임 점수로 변환
+   * - AI 점수(0~10)를 난이도별 만점 기준으로 비율 계산
+   * - Easy: 만점 10점, Medium: 만점 20점, Hard: 만점 30점
+   * @param aiScore AI가 부여한 점수 (0~10)
+   * @param difficulty 문제 난이도 (1~5 또는 null)
+   * @param isCorrect 정답 여부
+   * @returns 게임 점수
+   */
+  public calculateGameScore(
+    aiScore: number,
+    difficulty: number | null,
+    isCorrect: boolean,
+  ): number {
+    if (!isCorrect) {
+      return 0;
+    }
+
+    const difficultyLevel = mapDifficulty(difficulty);
+    const maxScore = SCORE_MAP[difficultyLevel];
+
+    return Math.round((aiScore / 10) * maxScore);
   }
 }
