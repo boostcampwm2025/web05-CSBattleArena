@@ -1,6 +1,3 @@
-import { useState } from 'react';
-
-import { useScene } from '@/feature/useScene.tsx';
 import { useHome } from './hooks/useHome';
 
 import LoginModal from './components/LoginModal';
@@ -13,19 +10,10 @@ export default function Home() {
     onClickLoginBtn,
     onClickMyPageBtn,
     onClickLogoutBtn,
+    onClickQuickStartBtn,
+    onClickSelfStudyBtn,
+    onClickProblemBankBtn,
   } = useHome();
-  const { setScene } = useScene();
-
-  const [isDisabled, setIsDisabled] = useState<boolean>(false);
-
-  const onClickQuickStartBtn = () => {
-    if (isDisabled) {
-      return;
-    }
-
-    setIsDisabled(true);
-    setScene('match');
-  };
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -159,10 +147,9 @@ export default function Home() {
 
           {/* Quick Start Button */}
           <button
-            onClick={onClickQuickStartBtn}
-            disabled={isDisabled}
-            className="disabled:none border-4 border-pink-300 bg-gradient-to-r from-pink-500 to-rose-500 py-4 text-2xl font-bold text-white shadow-lg shadow-pink-500/50 transition-all duration-200 enabled:hover:scale-105 enabled:hover:from-pink-400 enabled:hover:to-rose-400 disabled:border-pink-300/40 disabled:from-pink-900/50 disabled:to-rose-900/50 disabled:text-white/70 disabled:shadow-pink-500/20"
+            className="disabled:none border-4 border-pink-300 bg-gradient-to-r from-pink-500 to-rose-500 py-4 text-2xl font-bold text-white shadow-lg shadow-pink-500/50 transition-all duration-200 enabled:hover:scale-105 enabled:hover:from-pink-400 enabled:hover:to-rose-400"
             style={{ fontFamily: 'Orbitron' }}
+            onClick={onClickQuickStartBtn}
           >
             <i className="ri-sword-line mr-3 text-2xl" />
             QUICK START (ONLINE MATCH)
@@ -170,9 +157,9 @@ export default function Home() {
 
           {/* Self Study Button */}
           <button
-            onClick={() => {}}
             className="border-4 border-purple-300 bg-gradient-to-r from-purple-500 to-indigo-500 py-4 text-2xl font-bold text-white shadow-lg shadow-purple-500/50 transition-all duration-200 hover:scale-105 hover:from-purple-400 hover:to-indigo-400"
             style={{ fontFamily: 'Orbitron' }}
+            onClick={onClickSelfStudyBtn}
           >
             <i className="ri-book-open-line mr-3 text-2xl" />
             SELF STUDY (SINGLE MODE)
@@ -189,7 +176,7 @@ export default function Home() {
               LEADERBOARD
             </button>
             <button
-              onClick={() => setScene('problem-bank')}
+              onClick={onClickProblemBankBtn}
               className="border-4 border-emerald-300 bg-gradient-to-r from-emerald-500 to-teal-500 py-4 text-2xl font-bold text-white shadow-lg shadow-emerald-500/50 transition-all duration-200 hover:scale-105 hover:from-emerald-400 hover:to-teal-400"
               style={{ fontFamily: 'Orbitron' }}
             >

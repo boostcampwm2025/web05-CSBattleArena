@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { handleOAuthCallback, logout } from '@/feature/auth/auth.api';
+
 import { useUser } from '@/feature/auth/useUser';
+import { useScene } from '@/feature/useScene';
 
 export function useHome() {
   const { userData, setUserData, setAccessToken } = useUser();
+  const { setScene } = useScene();
 
   const [isOpenLoginModal, setIsOpenLoginModal] = useState<boolean>(false);
 
@@ -47,6 +50,33 @@ export function useHome() {
     setAccessToken(null);
   }, [setUserData, setAccessToken]);
 
+  const onClickQuickStartBtn = useCallback(() => {
+    if (!userData) {
+      setIsOpenLoginModal(true);
+      return;
+    }
+
+    setScene('match');
+  }, [userData, setScene]);
+
+  const onClickSelfStudyBtn = useCallback(() => {
+    if (!userData) {
+      setIsOpenLoginModal(true);
+      return;
+    }
+
+    // TODO: 싱글 모드 로직이 병합되면 추가할 예정
+  }, [userData, setScene]);
+
+  const onClickProblemBankBtn = useCallback(() => {
+    if (!userData) {
+      setIsOpenLoginModal(true);
+      return;
+    }
+
+    setScene('problem-bank');
+  }, [userData, setScene]);
+
   return {
     userData,
     isOpenLoginModal,
@@ -54,5 +84,8 @@ export function useHome() {
     onClickLoginBtn,
     onClickMyPageBtn,
     onClickLogoutBtn,
+    onClickQuickStartBtn,
+    onClickSelfStudyBtn,
+    onClickProblemBankBtn,
   };
 }
