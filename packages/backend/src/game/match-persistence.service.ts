@@ -6,6 +6,13 @@ import { FinalResult, GameSession } from './interfaces/game.interfaces';
 import { Match, Round, RoundAnswer } from '../match/entity';
 import { UserProblemBank } from '../problem-bank/entity';
 
+class NonRetryableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'NonRetryableError';
+  }
+}
+
 @Injectable()
 export class MatchPersistenceService {
   private readonly logger = new Logger(MatchPersistenceService.name);
@@ -41,9 +48,19 @@ export class MatchPersistenceService {
 
         return;
       } catch (error) {
-        const delay = this.calculateBackoff(attempt);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         const errorStack = error instanceof Error ? error.stack : undefined;
+
+        if (error instanceof NonRetryableError) {
+          this.logger.error(
+            `매치 저장 실패 (재시도 불가) - room: ${roomId}`,
+            JSON.stringify({ roomId, finalResult, error: errorMessage }),
+          );
+
+          return;
+        }
+
+        const delay = this.calculateBackoff(attempt);
 
         if (attempt < this.MAX_RETRIES) {
           this.logger.warn(
@@ -90,7 +107,13 @@ export class MatchPersistenceService {
       .returning('id')
       .execute();
 
-    return result.generatedMaps[0].id as number;
+    const generated = result.generatedMaps[0];
+
+    if (!generated) {
+      throw new NonRetryableError('Match INSERT 실패: ID가 반환되지 않음');
+    }
+
+    return generated.id as number;
   }
 
   /**
@@ -115,10 +138,15 @@ export class MatchPersistenceService {
       .returning(['id', 'roundNumber'])
       .execute();
 
+    if (roundsData.length > 0 && result.generatedMaps.length === 0) {
+      throw new NonRetryableError('Round INSERT 실패: ID가 반환되지 않음');
+    }
+
     const roundIdMap = new Map<number, number>();
-    result.generatedMaps.forEach((r) => {
+
+    for (const r of result.generatedMaps) {
       roundIdMap.set(r.roundNumber as number, r.id as number);
-    });
+    }
 
     return roundIdMap;
   }
@@ -150,6 +178,16 @@ export class MatchPersistenceService {
     for (const [roundNum, roundData] of session.rounds.entries()) {
       const roundId = roundIdMap.get(roundNum);
       const questionType = roundData.question?.questionType;
+
+      if (roundId === undefined) {
+        this.logger.warn(`roundId 없음: round ${roundNum}`);
+        continue;
+      }
+
+      if (!questionType) {
+        this.logger.warn(`questionType 없음: round ${roundNum}`);
+        continue;
+      }
 
       for (const [playerId, submission] of Object.entries(roundData.submissions)) {
         if (!submission) {
@@ -209,8 +247,13 @@ export class MatchPersistenceService {
   ): Partial<UserProblemBank>[] {
     const problemBanksData: Partial<UserProblemBank>[] = [];
 
-    for (const [, roundData] of session.rounds.entries()) {
+    for (const [roundNum, roundData] of session.rounds.entries()) {
       const questionType = roundData.question?.questionType;
+
+      if (!questionType) {
+        this.logger.warn(`questionType 없음 (problemBank): round ${roundNum}`);
+        continue;
+      }
 
       for (const [playerId, submission] of Object.entries(roundData.submissions)) {
         if (!submission) {
