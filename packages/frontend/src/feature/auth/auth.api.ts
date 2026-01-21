@@ -1,5 +1,5 @@
 export function login() {
-  window.location.href = `${import.meta.env.VITE_BACKEND_ORIGIN}/api/auth/github`;
+  window.location.replace(`${import.meta.env.VITE_BACKEND_ORIGIN}/api/auth/github`);
 }
 
 export async function logout(signal: AbortSignal) {
@@ -42,7 +42,7 @@ export function handleOAuthCallback() {
     return { ok: false, err: 'There is no user data.' };
   }
 
-  window.history.replaceState(null, '', window.location.pathname);
+  window.history.replaceState(null, '', '/');
 
   return { ok: true, accessToken: token, userData: JSON.parse(decodeURIComponent(userRaw)) };
 }
