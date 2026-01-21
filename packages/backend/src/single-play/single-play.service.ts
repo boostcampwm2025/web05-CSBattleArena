@@ -139,6 +139,12 @@ export class SinglePlayService {
       // 게임에 답안 저장
       game.submitAnswer(questionId, answer, grade.isCorrect, currentScore, grade.feedback);
 
+      // 모든 문제를 풀었으면 게임 완료 처리
+      if (game.isAllAnswered()) {
+        game.complete();
+        this.logger.log(`Game completed for user ${userId}. Final score: ${game.getTotalScore()}`);
+      }
+
       return {
         grade: {
           answer: grade.answer,
