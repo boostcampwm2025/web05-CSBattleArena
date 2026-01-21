@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { Category, Question as QuestionEntity } from '../quiz/entity';
 import { QuizService } from '../quiz/quiz.service';
 import { Question } from '../quiz/quiz.types';
@@ -29,7 +29,7 @@ export class SinglePlayService {
   async getCategories(): Promise<Array<{ id: number; name: string | null }>> {
     try {
       const categories = await this.categoryRepository.find({
-        where: { parentId: null },
+        where: { parentId: IsNull() },
         select: ['id', 'name'],
         order: { id: 'ASC' },
       });
