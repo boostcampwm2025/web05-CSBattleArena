@@ -94,7 +94,7 @@ jobs:
           username: ${{ secrets.NCP_SERVER_USERNAME }}
           key: ${{ secrets.NCP_SERVER_SSH_KEY }}
           port: ${{ secrets.NCP_SERVER_SSH_PORT }}
-          source: "docker-compose.yml"
+          source: "docker-compose-prod.yml"
           target: "/home/web05-boostcamp/"
 
       - name: Deploy to NCP Server
