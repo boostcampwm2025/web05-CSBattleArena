@@ -10,6 +10,7 @@ class NonRetryableError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'NonRetryableError';
+    Object.setPrototypeOf(this, NonRetryableError.prototype);
   }
 }
 
@@ -51,7 +52,7 @@ export class MatchPersistenceService {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         const errorStack = error instanceof Error ? error.stack : undefined;
 
-        if (error instanceof NonRetryableError) {
+        if (error instanceof Error && error.name === 'NonRetryableError') {
           this.logger.error(
             `매치 저장 실패 (재시도 불가) - room: ${roomId}`,
             JSON.stringify({ roomId, finalResult, error: errorMessage }),
