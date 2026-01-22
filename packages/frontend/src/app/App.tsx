@@ -1,10 +1,8 @@
 import { useEffect } from 'react';
 
-import { getUserData } from '@/lib/socket';
-
+import { UserData } from '@/shared/type';
 import { useScene } from '@/feature/useScene';
 import { useUser } from '@/feature/auth/useUser';
-import { UserData } from '@/shared/type';
 
 import { MatchProvider } from '@/feature/matching/useMatch';
 
@@ -15,8 +13,6 @@ import ProblemBank from '@/pages/problem-bank/ProblemBank';
 export default function App() {
   const { scene, setScene } = useScene();
   const { setUserData } = useUser();
-
-  useEffect(() => setUserData(getUserData()), [setUserData]);
 
   // GitHub OAuth 콜백 처리
   useEffect(() => {
