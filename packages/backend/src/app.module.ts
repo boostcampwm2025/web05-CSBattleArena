@@ -4,12 +4,15 @@ import { AppService } from './app.service';
 import { GameModule } from './game/game.module';
 import { MatchmakingModule } from './matchmaking/matchmaking.module';
 import { QuizModule } from './quiz/quiz.module';
+import { SinglePlayModule } from './single-play/single-play.module';
 import { HealthController } from './health/health.controller';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { FeedbackModule } from './feedback/feedback.module';
+import { ProblemBankModule } from './problem-bank/problem-bank.module';
 import { feedbackLoggerConfig } from './common/winston.config';
 import { WinstonModule } from 'nest-winston';
+import { AuthModule } from './auth/auth.module';
 
 const configModule = ConfigModule.forRoot({
   isGlobal: true,
@@ -40,10 +43,13 @@ const metadata: ModuleMetadata = {
     configModule,
     typeOrmModule,
     WinstonModule.forRoot(feedbackLoggerConfig),
+    AuthModule,
     QuizModule,
     MatchmakingModule,
     GameModule,
     FeedbackModule,
+    SinglePlayModule,
+    ProblemBankModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],
