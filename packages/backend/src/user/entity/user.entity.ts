@@ -1,4 +1,11 @@
-import { Column, Entity, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  OneToMany,
+  OneToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { UserStatistics } from './user-statistics.entity';
 import { UserTierHistory } from '../../tier/entity';
 import { RoundAnswer } from '../../match/entity';
@@ -28,6 +35,9 @@ export class User {
 
   @Column({ type: 'varchar', nullable: true, name: 'oauth_id' })
   oauthId: string | null;
+
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt: Date;
 
   @OneToOne(() => UserStatistics, (statistics) => statistics.user)
   statistics: UserStatistics;
