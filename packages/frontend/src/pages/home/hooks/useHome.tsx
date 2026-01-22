@@ -67,6 +67,7 @@ export function useHome() {
       return;
     }
 
+    setScene('single-play');
     // TODO: 싱글 모드 로직이 병합되면 추가할 예정
   }, [userData]);
 
