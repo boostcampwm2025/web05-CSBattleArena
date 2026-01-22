@@ -156,10 +156,21 @@ export class RoundProgressionService {
     // 제출 시간 기반 보너스 계산 - 정답자 중 가장 빠른 사람 찾기
     const correctSubmissions = gradeResults
       .filter((grade) => grade.isCorrect)
-      .map((grade) => ({
-        playerId: grade.playerId,
-        submittedAt: submissions.find((sub) => sub.playerId === grade.playerId).submittedAt,
-      }));
+      .map((grade) => {
+        const submission = submissions.find((sub) => sub.playerId === grade.playerId);
+
+        if (!submission) {
+          this.logger.warn(`제출 정보를 찾을 수 없음 - playerId: ${grade.playerId}`);
+
+          return null;
+        }
+
+        return {
+          playerId: grade.playerId,
+          submittedAt: submission.submittedAt,
+        };
+      })
+      .filter((item) => item !== null);
 
     const fastestCorrectSubmission =
       correctSubmissions.length > 0
