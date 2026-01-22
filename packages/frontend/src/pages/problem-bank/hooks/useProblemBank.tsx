@@ -81,10 +81,16 @@ export function useProblemBank() {
       const stats = await fetchStatistics(accessToken);
       setStatistics(stats);
     } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        setScene('home');
+
+        return;
+      }
+
       // eslint-disable-next-line no-console
       console.error('Failed to load statistics:', err);
     }
-  }, [accessToken]);
+  }, [accessToken, setScene]);
 
   const loadCategories = useCallback(async () => {
     try {
@@ -113,6 +119,12 @@ export function useProblemBank() {
       try {
         await updateBookmark(accessToken, problemId, newBookmarkState);
       } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          setScene('home');
+
+          return;
+        }
+
         setItems((prevItems) =>
           prevItems.map((item) =>
             item.id === problemId ? { ...item, isBookmarked: currentBookmarkState } : item,
@@ -123,7 +135,7 @@ export function useProblemBank() {
         setError('Failed to update bookmark');
       }
     },
-    [accessToken],
+    [accessToken, setScene],
   );
 
   const updateFilters = useCallback((newFilters: Partial<ProblemBankFilters>) => {
