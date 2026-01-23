@@ -21,12 +21,10 @@ export class FeedbackController {
     status: 201,
     description: '피드백 제출 성공',
     schema: {
+      type: 'object',
       properties: {
-        id: { type: 'number', example: 1 },
-        category: { type: 'string', example: 'bug' },
-        content: { type: 'string', example: '문제가 발생했습니다.' },
-        userId: { type: 'number', example: 1 },
-        createdAt: { type: 'string', example: '2024-01-01T00:00:00.000Z' },
+        success: { type: 'boolean', example: true },
+        message: { type: 'string', example: '피드백이 성공적으로 제출되었습니다.' },
       },
     },
   })

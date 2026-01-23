@@ -135,9 +135,15 @@ export class AuthController {
     schema: {
       properties: {
         id: { type: 'number', description: '사용자 ID' },
-        githubId: { type: 'string', description: 'GitHub ID' },
-        username: { type: 'string', description: '사용자 이름' },
-        avatarUrl: { type: 'string', description: '프로필 이미지 URL' },
+        visibleId: { type: 'string', description: '외부에 노출되는 사용자 ID' },
+        nickname: { type: 'string', description: '사용자 닉네임' },
+        email: { type: 'string', description: '사용자 이메일' },
+        userProfile: { type: 'string', description: '사용자 프로필 정보' },
+        oauthProvider: { type: 'string', description: 'OAuth 제공자 (github 등)' },
+        tier: { type: 'string', description: '사용자 티어' },
+        expPoint: { type: 'number', description: '경험치' },
+        winCount: { type: 'number', description: '승리 횟수' },
+        loseCount: { type: 'number', description: '패배 횟수' },
       },
     },
   })

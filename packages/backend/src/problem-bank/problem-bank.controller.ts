@@ -20,6 +20,7 @@ import {
 import { ProblemBankService } from './problem-bank.service';
 import { GetProblemBankQueryDto } from './dto/get-problem-bank-query.dto';
 import { UpdateBookmarkDto } from './dto/update-bookmark.dto';
+import { ProblemBankResponseDto, ProblemBankStatisticsDto } from './dto/problem-bank-response.dto';
 import { RequestWithUser } from '../common/interfaces/request-with-user.interface';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -65,31 +66,7 @@ export class ProblemBankController {
   @ApiResponse({
     status: 200,
     description: '문제 은행 목록 조회 성공',
-    schema: {
-      properties: {
-        items: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'number' },
-              questionId: { type: 'number' },
-              questionContent: { type: 'string' },
-              categories: { type: 'array', items: { type: 'string' } },
-              difficulty: { type: 'string', enum: ['easy', 'medium', 'hard'] },
-              answerStatus: { type: 'string', enum: ['correct', 'incorrect', 'partial'] },
-              isBookmarked: { type: 'boolean' },
-              userAnswer: { type: 'string' },
-              correctAnswer: { type: 'string' },
-              aiFeedback: { type: 'string' },
-              solvedAt: { type: 'string' },
-            },
-          },
-        },
-        totalPages: { type: 'number' },
-        currentPage: { type: 'number' },
-      },
-    },
+    type: ProblemBankResponseDto,
   })
   @ApiResponse({ status: 401, description: '인증 실패' })
   getProblemBank(@Query() query: GetProblemBankQueryDto, @Req() req: RequestWithUser) {
@@ -108,15 +85,7 @@ export class ProblemBankController {
   @ApiResponse({
     status: 200,
     description: '통계 조회 성공',
-    schema: {
-      properties: {
-        totalSolved: { type: 'number', example: 100, description: '총 풀이 수' },
-        correctCount: { type: 'number', example: 70, description: '정답 수' },
-        incorrectCount: { type: 'number', example: 20, description: '오답 수' },
-        partialCount: { type: 'number', example: 10, description: '부분 정답 수' },
-        correctRate: { type: 'number', example: 70.0, description: '정답률 (%)' },
-      },
-    },
+    type: ProblemBankStatisticsDto,
   })
   @ApiResponse({ status: 401, description: '인증 실패' })
   getStatistics(@Req() req: RequestWithUser) {
@@ -136,12 +105,6 @@ export class ProblemBankController {
   @ApiResponse({
     status: 200,
     description: '북마크 업데이트 성공',
-    schema: {
-      properties: {
-        id: { type: 'number' },
-        isBookmarked: { type: 'boolean' },
-      },
-    },
   })
   @ApiResponse({ status: 401, description: '인증 실패' })
   @ApiResponse({ status: 404, description: '항목을 찾을 수 없음' })

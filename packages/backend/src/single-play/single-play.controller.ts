@@ -126,19 +126,39 @@ export class SinglePlayController {
     status: 200,
     description: '채점 완료',
     schema: {
+      type: 'object',
       properties: {
-        score: { type: 'number', example: 10, description: '획득 점수' },
-        question: {
+        grade: {
           type: 'object',
+          description: '해당 문제에 대한 채점 결과',
           properties: {
-            id: { type: 'number', example: 1 },
-            content: { type: 'string', example: 'HTTP와 HTTPS의 차이점은?' },
-            correctAnswer: { type: 'string', example: 'A' },
+            answer: {
+              type: 'string',
+              example: 'A',
+              description: '사용자가 제출한 답안',
+            },
+            isCorrect: {
+              type: 'boolean',
+              example: true,
+              description: '정답 여부',
+            },
+            score: {
+              type: 'number',
+              example: 10,
+              description: '해당 문제에서 획득한 점수',
+            },
+            feedback: {
+              type: 'string',
+              example: '정답입니다!',
+              description: 'AI 피드백',
+            },
           },
         },
-        userAnswer: { type: 'string', example: 'A', description: '사용자가 제출한 답안' },
-        correctAnswer: { type: 'string', example: 'A', description: '정답' },
-        aiFeedback: { type: 'string', example: '정답입니다!', description: 'AI 피드백' },
+        totalScore: {
+          type: 'number',
+          example: 30,
+          description: '현재까지의 총 누적 점수',
+        },
       },
     },
   })
@@ -171,8 +191,35 @@ export class SinglePlayController {
     status: 200,
     description: '게임 종료 성공',
     schema: {
+      type: 'object',
       properties: {
         message: { type: 'string', example: '게임이 종료되었습니다.' },
+        finalStats: {
+          type: 'object',
+          description: '게임 종료 시 최종 통계 정보',
+          properties: {
+            totalQuestions: {
+              type: 'number',
+              example: 10,
+              description: '전체 문제 수',
+            },
+            answeredQuestions: {
+              type: 'number',
+              example: 10,
+              description: '답변한 문제 수',
+            },
+            correctAnswers: {
+              type: 'number',
+              example: 7,
+              description: '정답 수',
+            },
+            totalScore: {
+              type: 'number',
+              example: 70,
+              description: '총 점수',
+            },
+          },
+        },
       },
     },
   })
