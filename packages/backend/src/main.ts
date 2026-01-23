@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
@@ -17,11 +18,42 @@ async function bootstrap() {
 
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // DTO에 정의되지 않은 속성은 자동으로 제거 (보안상 좋음)
-      forbidNonWhitelisted: true, // DTO에 없는 속성이 들어오면 아예 에러를 뱉음 (선택 사항)
-      transform: true, // 클라이언트가 보낸 데이터를 DTO 타입으로 자동 변환
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
     }),
   );
+
+  // Swagger 설정
+  const config = new DocumentBuilder()
+    .setTitle('Boostcamp Quiz API')
+    .setDescription('Boostcamp 퀴즈 플랫폼 API 문서')
+    .setVersion('1.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'JWT 토큰을 입력하세요',
+        in: 'header',
+      },
+      'access-token',
+    )
+    .addTag('auth', '인증 관련 API')
+    .addTag('singleplay', '싱글플레이 관련 API')
+    .addTag('quiz', '퀴즈 관련 API')
+    .addTag('problem-bank', '문제 은행 관련 API')
+    .addTag('feedback', '피드백 관련 API')
+    .addTag('health', '헬스 체크 API')
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api-docs', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  });
 
   await app.listen(4000);
 }

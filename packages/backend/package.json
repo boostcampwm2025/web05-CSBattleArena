@@ -26,6 +26,7 @@
     "@nestjs/platform-express": "^10.0.0",
     "@nestjs/platform-socket.io": "^10.4.20",
     "@nestjs/typeorm": "^11.0.0",
+    "@nestjs/swagger": "^7.4.0",
     "@nestjs/websockets": "^10.4.20",
     "cookie-parser": "^1.4.7",
     "passport": "^0.7.0",
