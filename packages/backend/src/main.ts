@@ -40,6 +40,12 @@ async function bootstrap() {
       },
       'access-token',
     )
+    .addCookieAuth('refreshToken', {
+      type: 'apiKey',
+      in: 'cookie',
+      name: 'refreshToken',
+      description: 'Refresh Token (HTTP Only Cookie)',
+    })
     .addTag('auth', '인증 관련 API')
     .addTag('singleplay', '싱글플레이 관련 API')
     .addTag('quiz', '퀴즈 관련 API')
