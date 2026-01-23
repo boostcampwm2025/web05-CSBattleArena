@@ -21,9 +21,9 @@ export class GetProblemBankQueryDto {
     example: [1, 2],
   })
   @IsOptional()
+  @Transform(({ value }) => (Array.isArray(value) ? value : [value]).map(Number))
   @IsArray()
-  @Type(() => Number)
-  @Transform(({ value }) => (Array.isArray(value) ? value : [value]) as number[])
+  @IsInt({ each: true, message: '각 categoryId는 정수여야 합니다.' })
   categoryIds?: number[];
 
   @ApiPropertyOptional({
