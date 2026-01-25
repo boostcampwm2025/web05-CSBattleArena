@@ -38,9 +38,9 @@ Category Path: {category.path}"""
     response = llm.invoke(messages)
 
     # response_metadata에서 토큰 사용량 추출
-    usage_info = response.response_metadata.get("usage", {})
-    input_tokens = usage_info.get("promptTokens", 0)
-    output_tokens = usage_info.get("completionTokens", 0)
+    token_usage = response.response_metadata.get("token_usage", {})
+    input_tokens = token_usage.get("prompt_tokens", 0)
+    output_tokens = token_usage.get("completion_tokens", 0)
 
     # 비용 계산 (HyDE는 config.LLM_MODEL 사용)
     usage = calculate_cost(input_tokens, output_tokens, model=config.LLM_MODEL)
