@@ -16,7 +16,7 @@ export function fetchQuestions(
   categoryIds: number[],
   signal?: AbortSignal,
 ) {
-  return request<GetQuestionsRes>('/api/singleplay/questions', accessToken, {
+  return request<GetQuestionsRes>('/api/singleplay/question', accessToken, {
     query: { categoryId: categoryIds },
     signal,
   });
