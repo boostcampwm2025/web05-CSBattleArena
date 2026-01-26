@@ -19,6 +19,12 @@ describe('QuizService', () => {
     callClova: jest.fn(),
   };
 
+  const mockLogger = {
+    error: jest.fn(),
+    warn: jest.fn(),
+    log: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -39,6 +45,7 @@ describe('QuizService', () => {
     }).compile();
 
     service = module.get<QuizService>(QuizService);
+    (service as any).logger = mockLogger;
   });
 
   describe('generateQuestion', () => {
@@ -687,14 +694,12 @@ describe('QuizService', () => {
 
       // Mock categoryRepository.find - 3번 호출됨 (첫 번째 루프 2회, 두 번째 루프 2회, 총 4회이지만 각 대분류당 1회씩 실제로는 총 4회)
       mockCategoryRepository.find
-        .mockResolvedValueOnce(dbChildren) // 첫 번째 for문에서 parent 1 조회
-        .mockResolvedValueOnce(networkChildren) // 첫 번째 for문에서 parent 2 조회
-        .mockResolvedValueOnce(dbChildren) // 두 번째 for문에서 parent 1 조회
-        .mockResolvedValueOnce(networkChildren); // 두 번째 for문에서 parent 2 조회
+        .mockResolvedValueOnce(dbChildren) // parent 1의 하위 카테고리 조회
+        .mockResolvedValueOnce(networkChildren); // parent 2의 하위 카테고리 조회
 
       // Mock queryBuilder for questions
       const mockQueryBuilder = {
-        innerJoin: jest.fn().mockReturnThis(),
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
@@ -710,8 +715,8 @@ describe('QuizService', () => {
       const result = await service.generateSinglePlayQuestions([1, 2], 10);
 
       expect(result).toHaveLength(10);
-      expect(mockCategoryRepository.find).toHaveBeenCalledTimes(4); // 첫 번째 루프 2회 + 두 번째 루프 2회
-      expect(mockQueryBuilder.innerJoin).toHaveBeenCalledTimes(2);
+      expect(mockCategoryRepository.find).toHaveBeenCalledTimes(2); // 각 대분류당 1회씩
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledTimes(6); // 2개 카테고리 * 3개 join
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
         'cq.categoryId IN (:...childIds)',
         expect.objectContaining({ childIds: expect.any(Array) })
@@ -816,13 +821,10 @@ describe('QuizService', () => {
       mockCategoryRepository.find
         .mockResolvedValueOnce(category1Children)
         .mockResolvedValueOnce(category2Children)
-        .mockResolvedValueOnce(category3Children)
-        .mockResolvedValueOnce(category1Children)
-        .mockResolvedValueOnce(category2Children)
         .mockResolvedValueOnce(category3Children);
 
       const mockQueryBuilder = {
-        innerJoin: jest.fn().mockReturnThis(),
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
@@ -853,20 +855,30 @@ describe('QuizService', () => {
     it('should throw error when no child categories found', async () => {
       mockCategoryRepository.find.mockResolvedValue([]); // 하위 카테고리 없음
 
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        addOrderBy: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+      };
+
+      mockQuestionRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
       await expect(service.generateSinglePlayQuestions([1], 10)).rejects.toThrow(
-        '선택한 카테고리에 하위 카테고리가 없습니다.'
+        '선택한 카테고리에 문제가 없습니다.'
       );
     });
 
     it('should throw error when no questions found', async () => {
       const childCategories = [{ id: 11 }, { id: 12 }];
 
-      mockCategoryRepository.find
-        .mockResolvedValueOnce(childCategories)
-        .mockResolvedValueOnce(childCategories);
+      mockCategoryRepository.find.mockResolvedValueOnce(childCategories);
 
       const mockQueryBuilder = {
-        innerJoin: jest.fn().mockReturnThis(),
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
@@ -896,12 +908,10 @@ describe('QuizService', () => {
         },
       ];
 
-      mockCategoryRepository.find
-        .mockResolvedValueOnce(childCategories)
-        .mockResolvedValueOnce(childCategories);
+      mockCategoryRepository.find.mockResolvedValueOnce(childCategories);
 
       const mockQueryBuilder = {
-        innerJoin: jest.fn().mockReturnThis(),
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
@@ -915,7 +925,9 @@ describe('QuizService', () => {
       await service.generateSinglePlayQuestions([1], 10);
 
       // 올바른 조인 확인
-      expect(mockQueryBuilder.innerJoin).toHaveBeenCalledWith('q.categoryQuestions', 'cq');
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('q.categoryQuestions', 'cq');
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('cq.category', 'c');
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('c.parent', 'parent');
 
       // 활성화된 문제만 조회
       expect(mockQueryBuilder.where).toHaveBeenCalledWith('q.isActive = :isActive', { isActive: true });
@@ -930,6 +942,63 @@ describe('QuizService', () => {
       expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith('q.usageCount', 'ASC');
       expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith('q.qualityScore', 'DESC');
       expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith('RANDOM()');
+    });
+  });
+
+  describe('calculateGameScore', () => {
+    it('Easy 난이도에서 AI 점수(10점)를 게임 점수(10점)로 변환해야 함', () => {
+      // Easy = 10점 만점
+      const score = service.calculateGameScore(10, 1, true);
+      expect(score).toBe(10);
+    });
+
+    it('Medium 난이도에서 AI 점수(10점)를 게임 점수(20점)로 변환해야 함', () => {
+      // Medium = 20점 만점
+      const score = service.calculateGameScore(10, 3, true);
+      expect(score).toBe(20);
+    });
+
+    it('Hard 난이도에서 AI 점수(10점)를 게임 점수(30점)로 변환해야 함', () => {
+      // Hard = 30점 만점
+      const score = service.calculateGameScore(10, 5, true);
+      expect(score).toBe(30);
+    });
+
+    it('오답인 경우 0점을 반환해야 함', () => {
+      const score = service.calculateGameScore(8, 3, false);
+      expect(score).toBe(0);
+    });
+
+    it('난이도가 null인 경우 Medium으로 간주하여 계산해야 함', () => {
+      // Medium = 20점 만점
+      const score = service.calculateGameScore(10, null, true);
+      expect(score).toBe(20);
+    });
+
+    it('부분 점수 비율대로 계산되어야 함 (Medium 난이도)', () => {
+      // AI 점수 5점 -> 5/10 = 0.5
+      // Medium 만점 20점 -> 20 * 0.5 = 10점
+      const score = service.calculateGameScore(5, 3, true);
+      expect(score).toBe(10);
+    });
+
+    it('부분 점수 비율대로 계산되어야 함 (Hard 난이도)', () => {
+      // AI 점수 8점 -> 8/10 = 0.8
+      // Hard 만점 30점 -> 30 * 0.8 = 24점
+      const score = service.calculateGameScore(8, 5, true);
+      expect(score).toBe(24);
+    });
+
+    it('점수는 반올림되어야 함', () => {
+      // AI 점수 3점 -> 3/10 = 0.3
+      // Medium 만점 20점 -> 20 * 0.3 = 6점
+      const score = service.calculateGameScore(3, 3, true);
+      expect(score).toBe(6);
+
+      // AI 점수 7점 -> 7/10 = 0.7
+      // Hard 만점 30점 -> 30 * 0.7 = 21점
+      const score2 = service.calculateGameScore(7, 5, true);
+      expect(score2).toBe(21);
     });
   });
 });

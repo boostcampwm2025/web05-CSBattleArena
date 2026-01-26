@@ -1,68 +1,74 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
-import { NotFoundException, InternalServerErrorException, BadRequestException } from '@nestjs/common';
+import { Repository, IsNull, DataSource } from 'typeorm';
+import { NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { SinglePlayService } from '../src/single-play/single-play.service';
-import { SinglePlaySessionManager } from '../src/single-play/single-play-session-manager';
 import { QuizService } from '../src/quiz/quiz.service';
 import { Category, Question as QuestionEntity } from '../src/quiz/entity';
 import { SCORE_MAP } from '../src/quiz/quiz.constants';
 
 describe('SinglePlayService', () => {
   let service: SinglePlayService;
-  let sessionManager: SinglePlaySessionManager;
+  let categoryRepository: Repository<Category>;
+  let questionRepository: Repository<QuestionEntity>;
+  let quizService: QuizService;
 
-    const mockCategoryRepository = {
-        find: jest.fn(),
-    };
+  const mockCategoryRepository = {
+    find: jest.fn(),
+  };
 
-    const mockQuestionRepository = {
-        findOne: jest.fn(),
-        find: jest.fn(),
-    };
+  const mockQuestionRepository = {
+    findOne: jest.fn(),
+  };
 
-    const mockDataSource = {
-        transaction: jest.fn(),
-    };
+  const mockQuizService = {
+    generateSinglePlayQuestions: jest.fn(),
+    gradeQuestion: jest.fn(),
+    determineAnswerStatus: jest.fn().mockReturnValue('correct'),
+  };
 
-    const mockQuizService = {
-        generateSinglePlayQuestions: jest.fn(),
-        gradeQuestion: jest.fn(),
-        determineAnswerStatus: jest.fn(),
-    };
+  const mockDataSource = {
+    transaction: jest.fn(async (callback) => {
+      const mockManager = {
+        save: jest.fn().mockResolvedValue({ id: 1 }),
+      };
+      return callback(mockManager);
+    }),
+  };
 
-    beforeEach(async () => {
-        const module: TestingModule = await Test.createTestingModule({
-            providers: [
-                SinglePlayService,
-                SinglePlaySessionManager,
-                {
-                    provide: getRepositoryToken(Category),
-                    useValue: mockCategoryRepository,
-                },
-                {
-                    provide: getRepositoryToken(QuestionEntity),
-                    useValue: mockQuestionRepository,
-                },
-                {
-                    provide: DataSource,
-                    useValue: mockDataSource,
-                },
-                {
-                    provide: QuizService,
-                    useValue: mockQuizService,
-                },
-            ],
-        }).compile();
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        SinglePlayService,
+        {
+          provide: getRepositoryToken(Category),
+          useValue: mockCategoryRepository,
+        },
+        {
+          provide: getRepositoryToken(QuestionEntity),
+          useValue: mockQuestionRepository,
+        },
+        {
+          provide: QuizService,
+          useValue: mockQuizService,
+        },
+        {
+          provide: DataSource,
+          useValue: mockDataSource,
+        },
+      ],
+    }).compile();
 
-        service = module.get<SinglePlayService>(SinglePlayService);
-        sessionManager = module.get<SinglePlaySessionManager>(SinglePlaySessionManager);
-    });
+    service = module.get<SinglePlayService>(SinglePlayService);
+    categoryRepository = module.get<Repository<Category>>(getRepositoryToken(Category));
+    questionRepository = module.get<Repository<QuestionEntity>>(
+      getRepositoryToken(QuestionEntity),
+    );
+    quizService = module.get<QuizService>(QuizService);
+  });
 
   afterEach(() => {
     jest.clearAllMocks();
-    // SessionManager의 interval 정리
-    sessionManager.onModuleDestroy();
   });
 
   describe('getCategories', () => {
@@ -83,7 +89,7 @@ describe('SinglePlayService', () => {
         { id: 3, name: 'DevOps' },
       ]);
       expect(mockCategoryRepository.find).toHaveBeenCalledWith({
-        where: { parentId: null },
+        where: { parentId: IsNull() },
         select: ['id', 'name'],
         order: { id: 'ASC' },
       });
@@ -107,33 +113,28 @@ describe('SinglePlayService', () => {
     });
   });
 
-  describe('getQuestions', () => {
-    const userId = 'user-123';
-
-    it('유효한 카테고리 ID로 문제 목록을 정상적으로 반환하고 게임을 생성해야 함', async () => {
+  describe('getQuestion', () => {
+    it('유효한 카테고리 ID로 문제 1개를 정상적으로 반환해야 함', async () => {
       const categoryIds = [1, 2];
       const mockExistingCategories = [{ id: 1 }, { id: 2 }];
-      const mockQuestions = [
-        { id: 1, questionType: 'multiple', content: 'What is React?', difficulty: 2 },
-        { id: 2, questionType: 'short', content: 'Explain Node.js', difficulty: 3 },
-      ];
+      const mockQuestion = {
+        id: 1,
+        questionType: 'multiple',
+        content: 'What is React?',
+        difficulty: 2,
+      };
 
       mockCategoryRepository.find.mockResolvedValue(mockExistingCategories);
-      mockQuizService.generateSinglePlayQuestions.mockResolvedValue(mockQuestions);
+      mockQuizService.generateSinglePlayQuestions.mockResolvedValue([mockQuestion]);
 
-      const result = await service.getQuestions(userId, categoryIds);
+      const result = await service.getQuestion(categoryIds);
 
-      expect(result).toEqual(mockQuestions);
+      expect(result).toEqual(mockQuestion);
       expect(mockCategoryRepository.find).toHaveBeenCalledWith({
         where: categoryIds.map((id) => ({ id })),
         select: ['id'],
       });
-      expect(mockQuizService.generateSinglePlayQuestions).toHaveBeenCalledWith(categoryIds, 10);
-
-      // 게임이 생성되었는지 확인
-      const game = sessionManager.findGame(userId);
-      expect(game).not.toBeNull();
-      expect(game?.questionIds).toEqual([1, 2]);
+      expect(mockQuizService.generateSinglePlayQuestions).toHaveBeenCalledWith(categoryIds, 1);
     });
 
     it('존재하지 않는 카테고리 ID면 NotFoundException을 던져야 함', async () => {
@@ -141,82 +142,23 @@ describe('SinglePlayService', () => {
 
       mockCategoryRepository.find.mockResolvedValue([]);
 
-      await expect(service.getQuestions(userId, categoryIds)).rejects.toThrow(NotFoundException);
-      await expect(service.getQuestions(userId, categoryIds)).rejects.toThrow(
+      await expect(service.getQuestion(categoryIds)).rejects.toThrow(NotFoundException);
+      await expect(service.getQuestion(categoryIds)).rejects.toThrow(
         '존재하지 않는 카테고리가 있습니다: 999',
       );
-    });
-
-    it('일부 카테고리만 존재하면 NotFoundException을 던져야 함', async () => {
-      const categoryIds = [1, 999];
-      const mockExistingCategories = [{ id: 1 }]; // 1만 존재, 999는 없음
-
-      mockCategoryRepository.find.mockResolvedValue(mockExistingCategories);
-
-      await expect(service.getQuestions(userId, categoryIds)).rejects.toThrow(NotFoundException);
-      await expect(service.getQuestions(userId, categoryIds)).rejects.toThrow(
-        '존재하지 않는 카테고리가 있습니다: 999',
-      );
-    });
-
-    it('여러 개의 존재하지 않는 카테고리를 명시해야 함', async () => {
-      const categoryIds = [1, 999, 888];
-      const mockExistingCategories = [{ id: 1 }]; // 1만 존재
-
-      mockCategoryRepository.find.mockResolvedValue(mockExistingCategories);
-
-      await expect(service.getQuestions(userId, categoryIds)).rejects.toThrow(NotFoundException);
-      await expect(service.getQuestions(userId, categoryIds)).rejects.toThrow(
-        '존재하지 않는 카테고리가 있습니다: 999, 888',
-      );
-    });
-
-    it('문제 생성 실패 시 InternalServerErrorException을 던져야 함', async () => {
-      const categoryIds = [1];
-      const mockExistingCategories = [{ id: 1 }];
-
-      mockCategoryRepository.find.mockResolvedValue(mockExistingCategories);
-      mockQuizService.generateSinglePlayQuestions.mockRejectedValue(
-        new Error('Question generation failed'),
-      );
-
-      await expect(service.getQuestions(userId, categoryIds)).rejects.toThrow(
-        InternalServerErrorException,
-      );
-      await expect(service.getQuestions(userId, categoryIds)).rejects.toThrow(
-        '문제 조회 중 오류가 발생했습니다.',
-      );
-    });
-
-    it('빈 배열의 문제도 정상적으로 반환해야 함', async () => {
-      const categoryIds = [1];
-      const mockExistingCategories = [{ id: 1 }];
-
-      mockCategoryRepository.find.mockResolvedValue(mockExistingCategories);
-      mockQuizService.generateSinglePlayQuestions.mockResolvedValue([]);
-
-      const result = await service.getQuestions(userId, categoryIds);
-
-      expect(result).toEqual([]);
     });
   });
 
   describe('submitAnswer', () => {
-    const userId = 'user-123';
-
-    beforeEach(() => {
-      // 각 테스트 전에 게임 세션 생성
-      sessionManager.createGame(userId, [1], [1, 2, 3, 4, 5, 6, 7]);
-    });
-
-    it('Easy 난이도 - 정답 시 올바른 점수를 반환해야 함', async () => {
+    it('답안 제출, 채점, DB 저장을 정상적으로 처리해야 함', async () => {
+      const userId = '1';
       const questionId = 1;
       const answer = 'React';
       const mockQuestion = {
         id: 1,
         questionType: 'short',
         content: 'What is React?',
-        difficulty: 1, // Easy
+        difficulty: 1,
         correctAnswer: 'React',
       } as QuestionEntity;
 
@@ -225,209 +167,35 @@ describe('SinglePlayService', () => {
           playerId: 'single-player',
           answer: 'React',
           isCorrect: true,
-          score: 10, // AI 점수 만점
-          feedback: 'Perfect!',
-        },
-      ];
-
-      mockQuestionRepository.findOne.mockResolvedValue(mockQuestion);
-      mockQuizService.gradeQuestion.mockResolvedValue(mockGradeResult);
-
-      const result = await service.submitAnswer(userId, questionId, answer);
-
-      // Easy: (10/10) * 10 = 10점
-      expect(result).toEqual({
-        grade: {
-          answer: 'React',
-          isCorrect: true,
           score: 10,
           feedback: 'Perfect!',
         },
-        totalScore: 10,
-      });
-    });
-
-    it('Medium 난이도 - 부분 점수를 올바르게 계산해야 함', async () => {
-      const questionId = 2;
-      const answer = 'TCP is a protocol';
-      const mockQuestion = {
-        id: 2,
-        questionType: 'essay',
-        content: 'Explain TCP',
-        difficulty: 3, // Medium
-        correctAnswer: 'TCP is a connection-oriented protocol...',
-      } as QuestionEntity;
-
-      const mockGradeResult = [
-        {
-          playerId: 'single-player',
-          answer: 'TCP is a protocol',
-          isCorrect: true,
-          score: 6, // AI 부분 점수
-          feedback: 'Needs more detail',
-        },
       ];
 
       mockQuestionRepository.findOne.mockResolvedValue(mockQuestion);
       mockQuizService.gradeQuestion.mockResolvedValue(mockGradeResult);
-
-      const result = await service.submitAnswer(userId, questionId, answer);
-
-      // Medium: (6/10) * 20 = 12점
-      expect(result).toEqual({
-        grade: {
-          answer: 'TCP is a protocol',
-          isCorrect: true,
-          score: 6,
-          feedback: 'Needs more detail',
-        },
-        totalScore: 12,
-      });
-    });
-
-    it('Hard 난이도 - 만점 시 30점을 반환해야 함', async () => {
-      const questionId = 3;
-      const answer = 'Complete explanation';
-      const mockQuestion = {
-        id: 3,
-        questionType: 'essay',
-        content: 'Explain TCP congestion control',
-        difficulty: 5, // Hard
-        correctAnswer: 'TCP uses slow start, congestion avoidance...',
-      } as QuestionEntity;
-
-      const mockGradeResult = [
-        {
-          playerId: 'single-player',
-          answer: 'Complete explanation',
-          isCorrect: true,
-          score: 10, // AI 만점
-          feedback: 'Excellent!',
-        },
-      ];
-
-      mockQuestionRepository.findOne.mockResolvedValue(mockQuestion);
-      mockQuizService.gradeQuestion.mockResolvedValue(mockGradeResult);
-
-      const result = await service.submitAnswer(userId, questionId, answer);
-
-      // Hard: (10/10) * 30 = 30점
-      expect(result).toEqual({
-        grade: {
-          answer: 'Complete explanation',
-          isCorrect: true,
-          score: 10,
-          feedback: 'Excellent!',
-        },
-        totalScore: 30,
-      });
-    });
-
-    it('오답 시 0점을 반환해야 함', async () => {
-      const questionId = 4;
-      const answer = 'Wrong answer';
-      const mockQuestion = {
-        id: 4,
-        questionType: 'short',
-        content: 'What is DNS?',
-        difficulty: 2, // Easy
-        correctAnswer: 'Domain Name System',
-      } as QuestionEntity;
-
-      const mockGradeResult = [
-        {
-          playerId: 'single-player',
-          answer: 'Wrong answer',
-          isCorrect: false,
-          score: 0,
-          feedback: 'Incorrect',
-        },
-      ];
-
-      mockQuestionRepository.findOne.mockResolvedValue(mockQuestion);
-      mockQuizService.gradeQuestion.mockResolvedValue(mockGradeResult);
+      mockQuizService.determineAnswerStatus.mockReturnValue('correct');
 
       const result = await service.submitAnswer(userId, questionId, answer);
 
       expect(result).toEqual({
-        grade: {
-          answer: 'Wrong answer',
-          isCorrect: false,
-          score: 0,
-          feedback: 'Incorrect',
+        score: 10,
+        question: {
+          id: 1,
+          content: 'What is React?',
+          correctAnswer: 'React',
         },
-        totalScore: 0,
+        userAnswer: 'React',
+        correctAnswer: 'React',
+        aiFeedback: 'Perfect!',
       });
-    });
-
-    it('객관식 정답 시 난이도별 만점을 반환해야 함', async () => {
-      const questionId = 5;
-      const answer = 'A';
-      const mockQuestion = {
-        id: 5,
-        questionType: 'multiple',
-        content: JSON.stringify({
-          question: 'What is HTTP?',
-          options: { A: 'HyperText Transfer Protocol', B: 'Wrong', C: 'Wrong', D: 'Wrong' },
-        }),
-        difficulty: 3, // Medium
-        correctAnswer: 'A',
-      } as QuestionEntity;
-
-      const mockGradeResult = [
-        {
-          playerId: 'single-player',
-          answer: 'A',
-          isCorrect: true,
-          score: 10, // 객관식 정답 = AI 10점
-          feedback: 'Correct!',
-        },
-      ];
-
-      mockQuestionRepository.findOne.mockResolvedValue(mockQuestion);
-      mockQuizService.gradeQuestion.mockResolvedValue(mockGradeResult);
-
-      const result = await service.submitAnswer(userId, questionId, answer);
-
-      // Medium: (10/10) * 20 = 20점
-      expect(result).toEqual({
-        grade: {
-          answer: 'A',
-          isCorrect: true,
-          score: 10,
-          feedback: 'Correct!',
-        },
-        totalScore: 20,
-      });
-    });
-
-    it('발급받지 않은 문제 ID면 BadRequestException을 던져야 함', async () => {
-      const questionId = 999; // 세션에 없는 ID
-
-      await expect(service.submitAnswer(userId, questionId, 'answer')).rejects.toThrow(
-        BadRequestException,
-      );
-      await expect(service.submitAnswer(userId, questionId, 'answer')).rejects.toThrow(
-        '요청하지 않은 문제입니다.',
-      );
-    });
-
-    it('게임 세션이 없으면 NotFoundException을 던져야 함', async () => {
-      const invalidUserId = 'user-999';
-      const questionId = 1;
-      const answer = 'Some answer';
-
-      await expect(service.submitAnswer(invalidUserId, questionId, answer)).rejects.toThrow(
-        NotFoundException,
-      );
-      await expect(service.submitAnswer(invalidUserId, questionId, answer)).rejects.toThrow(
-        '게임 세션을 찾을 수 없습니다',
-      );
+      expect(mockDataSource.transaction).toHaveBeenCalled();
     });
 
     it('존재하지 않는 문제 ID면 NotFoundException을 던져야 함', async () => {
-      const questionId = 1;
-      const answer = 'Some answer';
+      const userId = 'user1';
+      const questionId = 999;
+      const answer = 'Answer';
 
       mockQuestionRepository.findOne.mockResolvedValue(null);
 
@@ -438,236 +206,15 @@ describe('SinglePlayService', () => {
         '존재하지 않는 문제입니다.',
       );
     });
-
-    it('채점 중 에러 발생 시 InternalServerErrorException을 던져야 함', async () => {
-      const questionId = 1;
-      const answer = 'Answer';
-      const mockQuestion = {
-        id: 1,
-        questionType: 'short',
-        content: 'Question',
-        difficulty: 2,
-        correctAnswer: 'Correct',
-      } as QuestionEntity;
-
-      mockQuestionRepository.findOne.mockResolvedValue(mockQuestion);
-      mockQuizService.gradeQuestion.mockRejectedValue(new Error('Grading service failed'));
-
-      await expect(service.submitAnswer(userId, questionId, answer)).rejects.toThrow(
-        InternalServerErrorException,
-      );
-      await expect(service.submitAnswer(userId, questionId, answer)).rejects.toThrow(
-        '채점 중 오류가 발생했습니다.',
-      );
-    });
-
-    it('난이도 null 시 Medium으로 처리해야 함', async () => {
-      const questionId = 6;
-      const answer = 'Answer';
-      const mockQuestion = {
-        id: 6,
-        questionType: 'short',
-        content: 'Question',
-        difficulty: null, // null
-        correctAnswer: 'Correct',
-      } as QuestionEntity;
-
-      const mockGradeResult = [
-        {
-          playerId: 'single-player',
-          answer: 'Answer',
-          isCorrect: true,
-          score: 10,
-          feedback: 'Good',
-        },
-      ];
-
-      mockQuestionRepository.findOne.mockResolvedValue(mockQuestion);
-      mockQuizService.gradeQuestion.mockResolvedValue(mockGradeResult);
-
-      const result = await service.submitAnswer(userId, questionId, answer);
-
-      // null → Medium: (10/10) * 20 = 20점
-      expect(result.totalScore).toBe(20);
-    });
-
-    it('점수 반올림이 올바르게 처리되어야 함', async () => {
-      const questionId = 7;
-      const answer = 'Partial answer';
-      const mockQuestion = {
-        id: 7,
-        questionType: 'essay',
-        content: 'Explain something',
-        difficulty: 3, // Medium (만점 20점)
-        correctAnswer: 'Full explanation',
-      } as QuestionEntity;
-
-      const mockGradeResult = [
-        {
-          playerId: 'single-player',
-          answer: 'Partial answer',
-          isCorrect: true,
-          score: 3, // AI 3점
-          feedback: 'Needs improvement',
-        },
-      ];
-
-      mockQuestionRepository.findOne.mockResolvedValue(mockQuestion);
-      mockQuizService.gradeQuestion.mockResolvedValue(mockGradeResult);
-
-      const result = await service.submitAnswer(userId, questionId, answer);
-
-      // Medium: (3/10) * 20 = 6점 (반올림)
-      expect(result.totalScore).toBe(6);
-    });
-
-    it('중복 답안 제출 시 BadRequestException을 던져야 함', async () => {
-      const questionId = 1;
-      const answer = 'First answer';
-      const mockQuestion = {
-        id: 1,
-        questionType: 'short',
-        content: 'Question',
-        difficulty: 2,
-        correctAnswer: 'Correct',
-      } as QuestionEntity;
-
-      const mockGradeResult = [
-        {
-          playerId: 'single-player',
-          answer: 'First answer',
-          isCorrect: true,
-          score: 10,
-          feedback: 'Good',
-        },
-      ];
-
-      mockQuestionRepository.findOne.mockResolvedValue(mockQuestion);
-      mockQuizService.gradeQuestion.mockResolvedValue(mockGradeResult);
-
-      // 첫 번째 제출은 성공
-      await service.submitAnswer(userId, questionId, answer);
-
-      // 두 번째 제출은 실패해야 함
-      await expect(service.submitAnswer(userId, questionId, 'Second answer')).rejects.toThrow(
-        BadRequestException,
-      );
-      await expect(service.submitAnswer(userId, questionId, 'Second answer')).rejects.toThrow(
-        '이미 답변한 문제입니다.',
-      );
-    });
-
-    it('완료된 게임에 답안 제출 시 BadRequestException을 던져야 함', async () => {
-      const questionId = 1;
-      const answer = 'Answer';
-
-      // 게임 강제 완료
-      const game = sessionManager.findGameOrThrow(userId);
-      game.complete();
-
-      await expect(service.submitAnswer(userId, questionId, answer)).rejects.toThrow(
-        BadRequestException,
-      );
-      await expect(service.submitAnswer(userId, questionId, answer)).rejects.toThrow(
-        '이미 완료된 게임입니다.',
-      );
-    });
   });
 
   describe('Score Constants Verification', () => {
     it('SCORE_MAP 상수가 올바른 값을 가져야 함', () => {
-      expect(SCORE_MAP.easy).toBe(10);
-      expect(SCORE_MAP.medium).toBe(20);
-      expect(SCORE_MAP.hard).toBe(30);
-    });
-  });
-
-  describe('saveGameToDatabase', () => {
-    const saveUserId = '999';
-
-    beforeEach(() => {
-      // 게임 세션 생성 및 답안 제출 시뮬레이션
-      const game = sessionManager.createGame(saveUserId, [1], [1, 2]);
-      game.submitAnswer(1, 'answer1', true, 10, 'Good');
-      game.submitAnswer(2, 'answer2', false, 0, 'Wrong');
-    });
-
-    it('게임 결과를 DB에 정상적으로 저장해야 함', async () => {
-      const mockQuestions = [
-        { id: 1, questionType: 'short' },
-        { id: 2, questionType: 'multiple' },
-      ];
-
-      mockQuestionRepository.find.mockResolvedValue(mockQuestions);
-      mockQuizService.determineAnswerStatus
-        .mockReturnValueOnce('correct')
-        .mockReturnValueOnce('incorrect');
-      mockDataSource.transaction.mockImplementation(async (callback) => {
-        const mockManager = {
-          createQueryBuilder: jest.fn().mockReturnValue({
-            insert: jest.fn().mockReturnThis(),
-            into: jest.fn().mockReturnThis(),
-            values: jest.fn().mockReturnThis(),
-            returning: jest.fn().mockReturnThis(),
-            execute: jest.fn().mockResolvedValue({
-              generatedMaps: [{ id: 1 }],
-            }),
-          }),
-        };
-        await callback(mockManager);
+      expect(SCORE_MAP).toEqual({
+        easy: 10,
+        medium: 20,
+        hard: 30,
       });
-
-      await service.saveGameToDatabase(saveUserId);
-
-      expect(mockQuestionRepository.find).toHaveBeenCalled();
-      expect(mockDataSource.transaction).toHaveBeenCalled();
-    });
-
-    it('게임 세션이 없으면 NotFoundException을 던져야 함', async () => {
-      const invalidUserId = '888';
-
-      await expect(service.saveGameToDatabase(invalidUserId)).rejects.toThrow(
-        '게임 세션을 찾을 수 없습니다',
-      );
-    });
-
-    it('트랜잭션 실패 시 에러를 던져야 함', async () => {
-      const mockQuestions = [
-        { id: 1, questionType: 'short' },
-        { id: 2, questionType: 'multiple' },
-      ];
-
-      mockQuestionRepository.find.mockResolvedValue(mockQuestions);
-      mockDataSource.transaction.mockRejectedValue(new Error('DB 연결 실패'));
-
-      await expect(service.saveGameToDatabase(saveUserId)).rejects.toThrow('DB 연결 실패');
-    });
-
-    it('questionType이 없는 문제는 건너뛰고 저장해야 함', async () => {
-      const mockQuestions = [
-        { id: 1, questionType: 'short' },
-        // id: 2는 조회되지 않음 (questionType 없음)
-      ];
-
-      mockQuestionRepository.find.mockResolvedValue(mockQuestions);
-      mockQuizService.determineAnswerStatus.mockReturnValue('correct');
-      mockDataSource.transaction.mockImplementation(async (callback) => {
-        const mockManager = {
-          createQueryBuilder: jest.fn().mockReturnValue({
-            insert: jest.fn().mockReturnThis(),
-            into: jest.fn().mockReturnThis(),
-            values: jest.fn().mockReturnThis(),
-            returning: jest.fn().mockReturnThis(),
-            execute: jest.fn().mockResolvedValue({
-              generatedMaps: [{ id: 1 }],
-            }),
-          }),
-        };
-        await callback(mockManager);
-      });
-
-      // 에러 없이 완료되어야 함 (questionType 없는 문제는 스킵)
-      await expect(service.saveGameToDatabase(saveUserId)).resolves.toBeUndefined();
     });
   });
 });

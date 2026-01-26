@@ -9,7 +9,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { MatchmakingService } from './matchmaking.service';
-import { GameService } from '../game/game.service';
+import { GameSessionManager } from '../game/game-session-manager';
 import { RoundProgressionService } from '../game/round-progression.service';
 import { UserInfo } from '../game/interfaces/user.interface';
 import { MatchmakingSessionManager } from './matchmaking-session-manager';
@@ -32,7 +32,7 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
   constructor(
     private readonly matchmakingService: MatchmakingService,
     private readonly sessionManager: MatchmakingSessionManager,
-    private readonly gameService: GameService,
+    private readonly gameSessionManager: GameSessionManager,
     private readonly roundProgression: RoundProgressionService,
     private readonly authService: AuthService,
   ) {}
@@ -73,11 +73,11 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
   }
 
   @SubscribeMessage('match:enqueue')
-  handleMatchEnqueue(@ConnectedSocket() client: Socket): {
+  async handleMatchEnqueue(@ConnectedSocket() client: Socket): Promise<{
     ok: boolean;
     sessionId?: string;
     error?: string;
-  } {
+  }> {
     try {
       const authSocket = client as AuthenticatedSocket;
       const user = authSocket.data.user;
@@ -95,7 +95,10 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
 
       const sessionId = this.sessionManager.createQueueSession(client.id, user.id, userInfo);
 
-      const match = this.matchmakingService.addToQueue(user.id);
+      // ELO 레이팅 조회
+      const fullUser = await this.authService.getUserById(user.id);
+      const eloRating = fullUser?.statistics?.tierPoint || 1000; // 기본 ELO: 1000
+      const match = this.matchmakingService.addToQueue(user.id, eloRating);
 
       if (match) {
         const player1Session = this.sessionManager.getQueueSessionByUserId(match.player1);
@@ -121,7 +124,7 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
               opponent: player1Session.userInfo,
             });
 
-            this.gameService.startGameFromMatch(
+            this.gameSessionManager.createGameSession(
               match.roomId,
               player1Session.userId,
               player1Session.socketId,
