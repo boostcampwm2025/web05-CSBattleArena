@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum } from 'class-validator';
+import { IsEnum, IsNotEmpty } from 'class-validator';
 
 export enum MatchType {
   MULTI = 'multi',
@@ -12,6 +12,7 @@ export class LeaderboardQueryDto {
     description: '매칭 타입',
     example: 'multi',
   })
+  @IsNotEmpty({ message: '매칭 타입은 필수입니다.' })
   @IsEnum(MatchType)
   type: MatchType;
 }
