@@ -32,11 +32,12 @@ export type Question =
 
 export type SinglePlayPhase =
   | { kind: 'preparing' }
-  | { kind: 'playing'; question: Question }
+  | { kind: 'playing' }
   | {
       kind: 'result';
       result: { answer: string; isCorrect: boolean; feedback: string };
       next?: Question;
+      isFetchingQuestion: boolean;
     };
 
 export type GetCategoriesRes = { categories: CategoryItem[] };

@@ -1,22 +1,135 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+
+import { fetchQuestion } from '@/lib/api/single-play';
 
 import { useUser } from '@/feature/auth/useUser';
-import { usePhase, useQuestion, useResult } from '@/feature/single-play/useRound';
+import { useCategory, usePhase, useQuestion } from '@/feature/single-play/useRound';
 
 export function useRoundResult() {
-  const { setPhase } = usePhase();
-  const { userData } = useUser();
-  const { question } = useQuestion();
-  const { submitAnswer } = useResult();
+  const { accessToken, userData } = useUser();
+  const { selectedCategoryIds } = useCategory();
+  const { phase, setPhase } = usePhase();
+  const { curQuestion, setCurQuestion } = useQuestion();
 
-  const onClickNextBtn = useCallback(() => {
-    setPhase('playing');
-  }, [setPhase]);
+  const controllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (phase.kind !== 'result') {
+      return;
+    }
+
+    if (phase.next) {
+      return;
+    }
+
+    if (phase.isFetchingQuestion) {
+      return;
+    }
+
+    controllerRef.current?.abort();
+
+    const controller = new AbortController();
+    controllerRef.current = controller;
+
+    setPhase((prev) => (prev.kind === 'result' ? { ...prev, isFetchingQuestion: true } : prev));
+
+    const prefetchQuestion = async () => {
+      try {
+        const data = await fetchQuestion(accessToken, selectedCategoryIds, controller.signal);
+
+        setPhase((prev) => (prev.kind === 'result' ? { ...prev, next: data.question } : prev));
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') {
+          return;
+        }
+
+        // TODO: 에러 발생 시 띄울 공통 모달 구현 및 에러 출력
+      } finally {
+        setPhase((prev) =>
+          prev.kind === 'result' ? { ...prev, isFetchingQuestion: false } : prev,
+        );
+      }
+    };
+
+    void prefetchQuestion();
+
+    return () => {
+      controllerRef.current?.abort();
+    };
+  }, [phase, setPhase, accessToken, selectedCategoryIds]);
+
+  const onClickNextBtn = useCallback(async () => {
+    if (phase.kind !== 'result') {
+      return;
+    }
+
+    if (phase.next) {
+      setCurQuestion(phase.next);
+      setPhase((prev) => {
+        if (prev.kind !== 'result') {
+          return prev;
+        }
+
+        return { kind: 'playing' };
+      });
+
+      return;
+    }
+
+    if (phase.isFetchingQuestion) {
+      return;
+    }
+
+    controllerRef.current?.abort();
+
+    const controller = new AbortController();
+    controllerRef.current = controller;
+
+    setPhase((prev) => (prev.kind === 'result' ? { ...prev, isFetchingQuestion: true } : prev));
+
+    try {
+      const data = await fetchQuestion(accessToken, selectedCategoryIds, controller.signal);
+
+      setCurQuestion(data.question);
+      setPhase((prev) => {
+        if (prev.kind !== 'result') {
+          return prev;
+        }
+
+        return {
+          kind: 'playing',
+        };
+      });
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') {
+        return;
+      }
+
+      // TODO: 에러 발생 시 띄울 공통 모달 구현 및 에러 출력
+    } finally {
+      setPhase((prev) => (prev.kind === 'result' ? { ...prev, isFetchingQuestion: false } : prev));
+    }
+  }, [phase, setPhase, setCurQuestion, accessToken, selectedCategoryIds]);
+
+  if (phase.kind !== 'result') {
+    return {
+      nickname: userData?.nickname,
+      curQuestion,
+      submittedAnswer: '',
+      isCorrect: false,
+      feedback: '',
+      isFetchingQuestion: false,
+      onClickNextBtn,
+    };
+  }
 
   return {
     nickname: userData?.nickname,
-    question,
-    submitAnswer,
+    curQuestion,
+    submittedAnswer: phase.result.answer,
+    isCorrect: phase.result.isCorrect,
+    feedback: phase.result.feedback,
+    isFetchingQuestion: phase.isFetchingQuestion,
     onClickNextBtn,
   };
 }

@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { useUser } from '@/feature/auth/useUser';
-import { useCategory, usePhase } from '@/feature/single-play/useRound';
+import { fetchCategories, fetchQuestion } from '@/lib/api/single-play';
 
 import { CategoryItem } from '@/pages/single-play/types/types';
-import { fetchCategories, fetchQuestion } from '@/lib/api/single-play';
+
+import { useUser } from '@/feature/auth/useUser';
+import { useCategory, usePhase, useQuestion } from '@/feature/single-play/useRound';
 
 export function usePreparing() {
   const { accessToken } = useUser();
   const { selectedCategoryIds, setSelectedCategoryIds } = useCategory();
   const { setPhase } = usePhase();
+  const { setCurQuestion } = useQuestion();
 
   const [categories, setCategories] = useState<Record<number, CategoryItem>>({});
   const [isLoadingCategories, setIsLoadingCategories] = useState<boolean>(false);
@@ -86,7 +88,8 @@ export function usePreparing() {
     try {
       const data = await fetchQuestion(accessToken, selectedCategoryIds, controller.signal);
 
-      setPhase({ kind: 'playing', question: data.question });
+      setCurQuestion(data.question);
+      setPhase({ kind: 'playing' });
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') {
         return;
@@ -96,7 +99,7 @@ export function usePreparing() {
     } finally {
       setIsLoadingQuestions(false);
     }
-  }, [accessToken, selectedCategoryIds, setPhase]);
+  }, [accessToken, selectedCategoryIds, setPhase, setCurQuestion]);
 
   return {
     categories,

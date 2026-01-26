@@ -3,12 +3,13 @@ import { useCallback, useRef, useState } from 'react';
 import { submitAnswer } from '@/lib/api/single-play';
 
 import { useUser } from '@/feature/auth/useUser';
-import { usePhase } from '@/feature/single-play/useRound';
+import { usePhase, useQuestion } from '@/feature/single-play/useRound';
 
 export function usePlaying() {
   const { accessToken } = useUser();
 
   const { phase, setPhase } = usePhase();
+  const { curQuestion } = useQuestion();
 
   const [answer, setAnswer] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -16,6 +17,10 @@ export function usePlaying() {
   const submitControllerRef = useRef<AbortController | null>(null);
 
   const onClickSubmitBtn = useCallback(async () => {
+    if (phase.kind !== 'playing') {
+      return;
+    }
+
     const trimmed = answer.trim();
 
     if (trimmed === '') {
@@ -32,7 +37,7 @@ export function usePlaying() {
     try {
       const data = await submitAnswer(
         accessToken,
-        { questionId: Number(phase.question.id), answer: trimmed },
+        { questionId: Number(curQuestion?.id), answer: trimmed },
         controller.signal,
       );
 
@@ -43,6 +48,8 @@ export function usePlaying() {
           isCorrect: data.grade.isCorrect,
           feedback: data.grade.feedback,
         },
+        next: undefined,
+        isFetchingQuestion: false,
       });
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') {
@@ -53,11 +60,12 @@ export function usePlaying() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [accessToken, answer, phase, setPhase]);
+  }, [accessToken, answer, phase, setPhase, curQuestion]);
 
   return {
     answer,
     setAnswer,
+    curQuestion,
     isSubmitting,
     onClickSubmitBtn,
   };
