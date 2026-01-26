@@ -21,7 +21,10 @@ export class GetProblemBankQueryDto {
     example: [1, 2],
   })
   @IsOptional()
-  @Transform(({ value }) => (Array.isArray(value) ? value : [value]).map(Number))
+  @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '') return undefined;
+    return (Array.isArray(value) ? value : [value]).map(Number);
+  })
   @IsArray()
   @IsInt({ each: true, message: '각 categoryId는 정수여야 합니다.' })
   categoryIds?: number[];
@@ -51,7 +54,9 @@ export class GetProblemBankQueryDto {
   })
   @IsOptional()
   @IsBoolean()
-  @Transform(({ value }) => value === 'true' || value === true)
+  @Transform(({ value }) =>
+    value === undefined || value === null ? undefined : value === 'true' || value === true
+  )
   isBookmarked?: boolean;
 
   @ApiPropertyOptional({
