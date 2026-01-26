@@ -70,6 +70,17 @@ export default function RoundResult() {
           </div>
         </div>
 
+        {/* AI Feedback */}
+        <div className="flex flex-col gap-2 border-4 border-purple-400 bg-gradient-to-r from-slate-800/95 to-slate-900/95 p-4 shadow-2xl shadow-purple-500/30">
+          <div className="text-sm font-bold text-purple-400" style={{ fontFamily: 'Orbitron' }}>
+            <i className="ri-robot-2-line mr-2" />
+            AI Feedback
+          </div>
+          <div className="text-base text-white" style={{ fontFamily: 'Orbitron' }}>
+            {aiFeedback}
+          </div>
+        </div>
+
         {/* Action Buttons */}
         <div className="flex w-full justify-end">
           <button
