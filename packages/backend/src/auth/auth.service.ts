@@ -104,7 +104,7 @@ export class AuthService {
         userId: savedUser.id,
         winCount: 0,
         loseCount: 0,
-        tierPoint: 0,
+        tierPoint: 1000,
         totalMatches: 0,
         expPoint: 0,
       });
