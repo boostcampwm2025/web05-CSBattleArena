@@ -6,7 +6,7 @@ export default function RoundResult() {
     curQuestion,
     submittedAnswer,
     isCorrect,
-    feedback,
+    aiFeedback,
     isFetchingQuestion,
     onClickNextBtn,
   } = useRoundResult();

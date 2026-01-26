@@ -10,7 +10,7 @@ export default function Playing() {
           className="bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-center text-4xl font-black text-transparent"
           style={{ fontFamily: '"Press Start 2P"' }}
         >
-          ROUND
+          Question
         </div>
 
         {/* Question Card */}

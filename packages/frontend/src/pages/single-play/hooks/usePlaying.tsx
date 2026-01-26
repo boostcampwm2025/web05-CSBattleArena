@@ -44,9 +44,9 @@ export function usePlaying() {
       setPhase({
         kind: 'result',
         result: {
-          answer: data.grade.answer,
+          submittedAnswer: data.grade.submittedAnswer,
           isCorrect: data.grade.isCorrect,
-          feedback: data.grade.feedback,
+          aiFeedback: data.grade.aiFeedback,
         },
         next: undefined,
         isFetchingQuestion: false,
@@ -60,7 +60,7 @@ export function usePlaying() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [accessToken, answer, phase, setPhase, curQuestion]);
+  }, [accessToken, answer, phase.kind, setPhase, curQuestion]);
 
   return {
     answer,

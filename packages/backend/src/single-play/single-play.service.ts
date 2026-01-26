@@ -96,7 +96,7 @@ export class SinglePlayService {
     answer: string,
   ): Promise<{
     score: number;
-    grade: { submittedAnswer: string; isCorrect: boolean; bestAnswer: string; aiFeedback: string };
+    grade: { submittedAnswer: string; isCorrect: boolean; aiFeedback: string };
   }> {
     try {
       const question = await this.findQuestionById(questionId);
@@ -114,7 +114,6 @@ export class SinglePlayService {
         grade: {
           submittedAnswer: answer,
           isCorrect: grade.isCorrect,
-          bestAnswer: question.correctAnswer,
           aiFeedback: grade.feedback,
         },
       };

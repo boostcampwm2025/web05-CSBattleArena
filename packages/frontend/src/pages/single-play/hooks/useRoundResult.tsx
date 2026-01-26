@@ -140,9 +140,9 @@ export function useRoundResult() {
   return {
     nickname: userData?.nickname,
     curQuestion,
-    submittedAnswer: phase.result.answer,
+    submittedAnswer: phase.result.submittedAnswer,
     isCorrect: phase.result.isCorrect,
-    feedback: phase.result.feedback,
+    aiFeedback: phase.result.aiFeedback,
     isFetchingQuestion: phase.isFetchingQuestion,
     onClickNextBtn,
   };

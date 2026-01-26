@@ -35,7 +35,11 @@ export type SinglePlayPhase =
   | { kind: 'playing' }
   | {
       kind: 'result';
-      result: { answer: string; isCorrect: boolean; feedback: string };
+      result: {
+        submittedAnswer: string;
+        isCorrect: boolean;
+        aiFeedback: string;
+      };
       next?: Question;
       isFetchingQuestion: boolean;
     };
@@ -47,5 +51,5 @@ export type GetQuestionsRes = { question: Question };
 export type SubmitAnswerReq = { questionId: number; answer: string };
 
 export type SubmitAnswerRes = {
-  grade: { answer: string; isCorrect: boolean; score: number; feedback: string };
+  grade: { submittedAnswer: string; isCorrect: boolean; aiFeedback: string };
 };
