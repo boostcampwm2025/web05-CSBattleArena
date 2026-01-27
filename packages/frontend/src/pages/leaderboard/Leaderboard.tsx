@@ -109,9 +109,10 @@ const RankingItem = memo(
             className="text-base font-bold text-emerald-400"
             style={{ fontFamily: 'Orbitron, sans-serif' }}
           >
-            {(isMulti && isMultiRanking(item)
-              ? item.tierPoint
-              : (item as SingleRankingItem).expPoint
+            {(
+              (isMulti && isMultiRanking(item)
+                ? item.tierPoint
+                : (item as SingleRankingItem).expPoint) ?? 0
             ).toLocaleString()}
           </span>
         </div>
