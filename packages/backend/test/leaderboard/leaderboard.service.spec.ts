@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { NotFoundException } from '@nestjs/common';
 import { LeaderboardService } from '../../src/leaderboard/leaderboard.service';
 import { UserStatistics } from '../../src/user/entity/user-statistics.entity';
 import { UserProblemBank } from '../../src/problem-bank/entity/user-problem-bank.entity';
@@ -15,7 +16,7 @@ describe('LeaderboardService', () => {
   let mockUserProblemBankRepository: any;
 
   const createMockQueryBuilder = (overrides = {}) => ({
-    leftJoinAndSelect: jest.fn().mockReturnThis(),
+    innerJoin: jest.fn().mockReturnThis(),
     leftJoin: jest.fn().mockReturnThis(),
     select: jest.fn().mockReturnThis(),
     addSelect: jest.fn().mockReturnThis(),
@@ -25,20 +26,9 @@ describe('LeaderboardService', () => {
     groupBy: jest.fn().mockReturnThis(),
     limit: jest.fn().mockReturnThis(),
     getOne: jest.fn().mockResolvedValue(null),
+    getRawOne: jest.fn().mockResolvedValue(null),
     getCount: jest.fn().mockResolvedValue(0),
     getRawMany: jest.fn().mockResolvedValue([]),
-    ...overrides,
-  });
-
-  const createMockUserStats = (overrides = {}) => ({
-    tierPoint: 1000,
-    winCount: 10,
-    loseCount: 5,
-    expPoint: 5000,
-    user: {
-      nickname: 'testUser',
-      userProfile: null,
-    },
     ...overrides,
   });
 
@@ -78,22 +68,31 @@ describe('LeaderboardService', () => {
         getRawMany: jest.fn().mockResolvedValue(rankings),
       });
       const myStatsQB = createMockQueryBuilder({
-        getOne: jest.fn().mockResolvedValue(myStats),
+        getRawOne: jest.fn().mockResolvedValue(myStats),
+      });
+      const rankCountQB = createMockQueryBuilder({
         getCount: jest.fn().mockResolvedValue(rankCount),
       });
 
       mockUserStatisticsRepository.createQueryBuilder
         .mockReturnValueOnce(rankingsQB)
         .mockReturnValueOnce(myStatsQB)
-        .mockReturnValueOnce(myStatsQB);
+        .mockReturnValueOnce(rankCountQB);
     };
 
     it('랭킹 목록과 내 순위를 반환한다', async () => {
       const rankings = [
-        { nickname: 'user1', userProfile: 'http://example.com/1.jpg', tierPoint: '2500', winCount: '50', loseCount: '10' },
-        { nickname: 'user2', userProfile: null, tierPoint: '2000', winCount: '40', loseCount: '15' },
+        { nickname: 'user1', userProfile: 'http://example.com/1.jpg', tierPoint: '2500', winCount: '50', loseCount: '10', tier: 'diamond' },
+        { nickname: 'user2', userProfile: null, tierPoint: '2000', winCount: '40', loseCount: '15', tier: 'platinum' },
       ];
-      const myStats = createMockUserStats({ tierPoint: 1500, winCount: 20, loseCount: 10 });
+      const myStats = {
+        nickname: 'testUser',
+        userProfile: null,
+        tierPoint: '1500',
+        winCount: '20',
+        loseCount: '10',
+        tier: 'gold',
+      };
 
       setupMultiMocks(rankings, myStats, 5);
 
@@ -101,13 +100,24 @@ describe('LeaderboardService', () => {
 
       expect(result.rankings).toHaveLength(2);
       expect(result.rankings[0].tierPoint).toBe(2500);
+      expect(result.rankings[0].tier).toBe('diamond');
       expect(result.myRanking.rank).toBe(6);
       expect(result.myRanking.tierPoint).toBe(1500);
+      expect(result.myRanking.tier).toBe('gold');
     });
 
     it('tierPoint가 가장 높으면 1등을 반환한다', async () => {
-      const rankings = [{ nickname: 'topUser', userProfile: null, tierPoint: '3000', winCount: '100', loseCount: '5' }];
-      const myStats = createMockUserStats({ tierPoint: 3000 });
+      const rankings = [
+        { nickname: 'topUser', userProfile: null, tierPoint: '3000', winCount: '100', loseCount: '5', tier: 'diamond' },
+      ];
+      const myStats = {
+        nickname: 'topUser',
+        userProfile: null,
+        tierPoint: '3000',
+        winCount: '100',
+        loseCount: '5',
+        tier: 'diamond',
+      };
 
       setupMultiMocks(rankings, myStats, 0);
 
@@ -116,17 +126,14 @@ describe('LeaderboardService', () => {
       expect(result.myRanking.rank).toBe(1);
     });
 
-    it('통계값이 null이면 0으로 처리한다', async () => {
-      const rankings = [{ nickname: 'user1', userProfile: null, tierPoint: null, winCount: null, loseCount: null }];
-      const myStats = createMockUserStats({ tierPoint: null, winCount: null, loseCount: null });
+    it('내 통계 정보가 없으면 NotFoundException을 던진다', async () => {
+      const rankings = [
+        { nickname: 'user1', userProfile: null, tierPoint: '2500', winCount: '50', loseCount: '10', tier: 'diamond' },
+      ];
 
-      setupMultiMocks(rankings, myStats, 0);
+      setupMultiMocks(rankings, null, 0);
 
-      const result = await service.getLeaderboard(MatchType.MULTI, 1) as MultiLeaderboardResponseDto;
-
-      expect(result.rankings[0].tierPoint).toBe(0);
-      expect(result.rankings[0].winCount).toBe(0);
-      expect(result.myRanking.tierPoint).toBe(0);
+      await expect(service.getLeaderboard(MatchType.MULTI, 1)).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -136,7 +143,9 @@ describe('LeaderboardService', () => {
         getRawMany: jest.fn().mockResolvedValue(rankings),
       });
       const myStatsQB = createMockQueryBuilder({
-        getOne: jest.fn().mockResolvedValue(myStats),
+        getRawOne: jest.fn().mockResolvedValue(myStats),
+      });
+      const rankCountQB = createMockQueryBuilder({
         getCount: jest.fn().mockResolvedValue(rankCount),
       });
       const problemCountsQB = createMockQueryBuilder({
@@ -148,7 +157,7 @@ describe('LeaderboardService', () => {
       mockUserStatisticsRepository.createQueryBuilder
         .mockReturnValueOnce(rankingsQB)
         .mockReturnValueOnce(myStatsQB)
-        .mockReturnValueOnce(myStatsQB);
+        .mockReturnValueOnce(rankCountQB);
 
       mockUserProblemBankRepository.createQueryBuilder
         .mockReturnValueOnce(problemCountsQB)
@@ -160,7 +169,11 @@ describe('LeaderboardService', () => {
         { nickname: 'user1', userProfile: null, expPoint: '15000', userId: '1' },
         { nickname: 'user2', userProfile: null, expPoint: '12000', userId: '2' },
       ];
-      const myStats = createMockUserStats({ expPoint: 8000 });
+      const myStats = {
+        nickname: 'testUser',
+        userProfile: null,
+        expPoint: '8000',
+      };
       const problemCounts = [
         { userId: '1', solvedCount: '100', correctCount: '85' },
         { userId: '2', solvedCount: '80', correctCount: '60' },
@@ -173,13 +186,19 @@ describe('LeaderboardService', () => {
 
       expect(result.rankings).toHaveLength(2);
       expect(result.rankings[0].expPoint).toBe(15000);
+      expect(result.rankings[0].level).toBe(150);
       expect(result.rankings[0].solvedCount).toBe(100);
       expect(result.myRanking.rank).toBe(3);
+      expect(result.myRanking.level).toBe(80);
     });
 
     it('푼 문제가 없으면 solvedCount와 correctCount는 0을 반환한다', async () => {
-      const rankings = [{ nickname: 'user1', userProfile: null, expPoint: '0', userId: '1' }];
-      const myStats = createMockUserStats({ expPoint: 0 });
+      const rankings = [{ nickname: 'user1', userProfile: null, expPoint: '100', userId: '1' }];
+      const myStats = {
+        nickname: 'testUser',
+        userProfile: null,
+        expPoint: '100',
+      };
 
       setupSingleMocks(rankings, myStats, 0, [], []);
 
@@ -189,44 +208,43 @@ describe('LeaderboardService', () => {
       expect(result.rankings[0].correctCount).toBe(0);
       expect(result.myRanking.solvedCount).toBe(0);
     });
+
+    it('내 통계 정보가 없으면 NotFoundException을 던진다', async () => {
+      const rankings = [{ nickname: 'user1', userProfile: null, expPoint: '15000', userId: '1' }];
+      const problemCounts = [{ userId: '1', solvedCount: '100', correctCount: '85' }];
+
+      setupSingleMocks(rankings, null, 0, problemCounts, []);
+
+      await expect(service.getLeaderboard(MatchType.SINGLE, 1)).rejects.toThrow(NotFoundException);
+    });
   });
 
   describe('엣지 케이스', () => {
     it('유저가 없으면 빈 랭킹을 반환한다', async () => {
       const rankingsQB = createMockQueryBuilder({ getRawMany: jest.fn().mockResolvedValue([]) });
       const myStatsQB = createMockQueryBuilder({
-        getOne: jest.fn().mockResolvedValue(createMockUserStats()),
+        getRawOne: jest.fn().mockResolvedValue({
+          nickname: 'testUser',
+          userProfile: null,
+          tierPoint: '1000',
+          winCount: '10',
+          loseCount: '5',
+          tier: 'silver',
+        }),
+      });
+      const rankCountQB = createMockQueryBuilder({
         getCount: jest.fn().mockResolvedValue(0),
       });
 
       mockUserStatisticsRepository.createQueryBuilder
         .mockReturnValueOnce(rankingsQB)
         .mockReturnValueOnce(myStatsQB)
-        .mockReturnValueOnce(myStatsQB);
+        .mockReturnValueOnce(rankCountQB);
 
       const result = await service.getLeaderboard(MatchType.MULTI, 1) as MultiLeaderboardResponseDto;
 
       expect(result.rankings).toHaveLength(0);
       expect(result.myRanking.rank).toBe(1);
-    });
-
-    it('통계 정보가 없는 유저는 기본값을 반환한다', async () => {
-      const rankingsQB = createMockQueryBuilder({ getRawMany: jest.fn().mockResolvedValue([]) });
-      const myStatsQB = createMockQueryBuilder({
-        getOne: jest.fn().mockResolvedValue(null),
-        getCount: jest.fn().mockResolvedValue(0),
-      });
-
-      mockUserStatisticsRepository.createQueryBuilder
-        .mockReturnValueOnce(rankingsQB)
-        .mockReturnValueOnce(myStatsQB)
-        .mockReturnValueOnce(myStatsQB);
-
-      const result = await service.getLeaderboard(MatchType.MULTI, 1) as MultiLeaderboardResponseDto;
-
-      expect(result.myRanking.rank).toBe(1);
-      expect(result.myRanking.nickname).toBe('');
-      expect(result.myRanking.tierPoint).toBe(0);
     });
   });
 });

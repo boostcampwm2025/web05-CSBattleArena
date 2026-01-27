@@ -15,6 +15,9 @@ export class MultiRankingItemDto {
 
   @ApiProperty({ description: '패배 횟수' })
   loseCount: number;
+
+  @ApiProperty({ description: '티어 이름' })
+  tier: string;
 }
 
 export class MultiMyRankingDto extends MultiRankingItemDto {
@@ -39,6 +42,9 @@ export class SingleRankingItemDto {
 
   @ApiProperty({ description: '경험치' })
   expPoint: number;
+
+  @ApiProperty({ description: '레벨' })
+  level: number;
 
   @ApiProperty({ description: '푼 문제 수' })
   solvedCount: number;
