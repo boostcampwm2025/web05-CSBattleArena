@@ -35,7 +35,12 @@ const getTierFromPoint = (tierPoint: number): string => {
 };
 
 export function TierHistoryChart({ data }: TierHistoryChartProps) {
-  const formattedData = data.map((point) => ({
+  // 날짜순으로 정렬 (오래된 것부터 = 왼쪽부터 우상향)
+  const sortedData = [...data].sort(
+    (a, b) => new Date(a.changedAt).getTime() - new Date(b.changedAt).getTime(),
+  );
+
+  const formattedData = sortedData.map((point) => ({
     ...point,
     displayDate: new Date(point.changedAt).toLocaleDateString('en-US', {
       month: 'short',
@@ -44,7 +49,7 @@ export function TierHistoryChart({ data }: TierHistoryChartProps) {
   }));
 
   // Calculate Y-axis domain based on user's tierPoint range
-  const tierPoints = data.map((point) => point.tierPoint);
+  const tierPoints = sortedData.map((point) => point.tierPoint);
   const minTierPoint = Math.min(...tierPoints);
   const maxTierPoint = Math.max(...tierPoints);
 
@@ -110,8 +115,8 @@ export function TierHistoryChart({ data }: TierHistoryChartProps) {
               dataKey="tierPoint"
               stroke="url(#tierGradient)"
               strokeWidth={2}
-              dot={{ fill: '#a855f7', r: 4 }}
-              activeDot={{ r: 6, fill: '#06b6d4' }}
+              dot={{ fill: '#a855f7', r: 4, stroke: '#06b6d4', strokeWidth: 2 }}
+              activeDot={{ r: 6, fill: '#06b6d4', stroke: '#fff', strokeWidth: 2 }}
             />
           </LineChart>
         </ResponsiveContainer>

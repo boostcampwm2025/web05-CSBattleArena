@@ -51,8 +51,8 @@ export function RecentActivityList({ matchHistory }: RecentActivityListProps) {
         </h3>
       </div>
 
-      {/* Scrollable Activity List */}
-      <div className="flex-1 overflow-y-auto p-3">
+      {/* Activity List */}
+      <div className="flex-1 overflow-hidden p-3">
         <div className="flex flex-col gap-2">
           {matchHistory.map((item, index) => {
             const config = getMatchConfig(item);
