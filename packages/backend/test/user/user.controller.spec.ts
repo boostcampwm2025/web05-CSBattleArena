@@ -121,11 +121,13 @@ describe('UserController', () => {
         {
           tier: 'gold',
           tierPoint: 1250,
+          tierChange: 25,
           changedAt: new Date('2025-01-15T10:30:00Z'),
         },
         {
           tier: 'gold',
           tierPoint: 1200,
+          tierChange: -15,
           changedAt: new Date('2025-01-14T10:30:00Z'),
         },
       ],

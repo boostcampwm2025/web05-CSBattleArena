@@ -243,6 +243,7 @@ describe('UserService', () => {
           id: 1,
           userId: 1,
           tierPoint: 1250,
+          tierChange: 25,
           updatedAt: new Date('2025-01-15T10:30:00Z'),
           tier: { name: 'gold' },
         },
@@ -250,6 +251,7 @@ describe('UserService', () => {
           id: 2,
           userId: 1,
           tierPoint: 1200,
+          tierChange: -15,
           updatedAt: new Date('2025-01-14T10:30:00Z'),
           tier: { name: 'gold' },
         },
@@ -262,6 +264,8 @@ describe('UserService', () => {
       expect(result.tierHistory).toHaveLength(2);
       expect(result.tierHistory[0].tier).toBe('gold');
       expect(result.tierHistory[0].tierPoint).toBe(1250);
+      expect(result.tierHistory[0].tierChange).toBe(25);
+      expect(result.tierHistory[1].tierChange).toBe(-15);
     });
 
     it('티어 정보가 없으면 tierPoint로 계산해야 함', async () => {
@@ -270,6 +274,7 @@ describe('UserService', () => {
           id: 1,
           userId: 1,
           tierPoint: 1500,
+          tierChange: null,
           updatedAt: new Date('2025-01-15T10:30:00Z'),
           tier: null,
         },
@@ -280,6 +285,7 @@ describe('UserService', () => {
       const result = await service.getTierHistory(1);
 
       expect(result.tierHistory[0].tier).toBe('gold');
+      expect(result.tierHistory[0].tierChange).toBeNull();
     });
   });
 

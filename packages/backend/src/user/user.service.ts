@@ -75,6 +75,7 @@ export class UserService {
     const tierHistory = histories.map((h) => ({
       tier: h.tier?.name ?? calculateTier(h.tierPoint ?? 0),
       tierPoint: h.tierPoint ?? 0,
+      tierChange: h.tierChange ?? null,
       changedAt: h.updatedAt,
     }));
 
