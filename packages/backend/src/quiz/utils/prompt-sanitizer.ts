@@ -55,6 +55,7 @@ const INJECTION_PATTERNS: { pattern: RegExp; description: string }[] = [
   { pattern: /\[system\]/i, description: '시스템 태그 인젝션' },
   { pattern: /\[assistant\]/i, description: '어시스턴트 태그 인젝션' },
   { pattern: /<\/?system>/i, description: 'XML 시스템 태그 인젝션' },
+  { pattern: /<\s*\/?\s*user_answer\s*>/i, description: 'USER_ANSWER 경계 탈출 시도' },
 ];
 
 /**
@@ -119,6 +120,11 @@ function sanitizeInput(input: string): string {
   sanitized = sanitized.replace(/---+/g, '－－－'); // em dash로 대체
   sanitized = sanitized.replace(/###/g, '＃＃＃'); // 전각 문자로 대체
   sanitized = sanitized.replace(/```/g, '｀｀｀'); // 전각 백틱으로 대체
+
+  // 2-1. <USER_ANSWER> 경계 탈출 방지
+  sanitized = sanitized.replace(/<\s*\/?\s*user_answer\s*>/gi, (m) =>
+    m.replace(/</g, '＜').replace(/>/g, '＞'),
+  );
 
   // 3. 연속 공백 정규화 (단, 줄바꿈은 유지)
   sanitized = sanitized.replace(/[ \t]+/g, ' ');
