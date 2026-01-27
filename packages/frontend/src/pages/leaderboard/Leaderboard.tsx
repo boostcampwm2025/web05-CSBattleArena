@@ -186,49 +186,50 @@ export default function Leaderboard() {
       </div>
 
       {/* Header */}
-      <div className="relative z-10 flex items-center border-b-4 border-cyan-400 bg-gradient-to-r from-slate-800/90 to-slate-900/90 px-8 py-4">
-        <div className="flex flex-1 items-center space-x-6">
+      <div className="relative z-10 flex items-center justify-between border-b-4 border-cyan-400 bg-gradient-to-r from-slate-800/95 to-slate-900/95 p-4">
+        <div className="flex items-center justify-center">
           <button
             onClick={() => setScene('home')}
-            className="whitespace-nowrap border-2 border-slate-400 bg-gradient-to-r from-slate-600 to-slate-700 px-4 py-2 font-bold text-white transition-all duration-200 hover:scale-105 hover:from-slate-500 hover:to-slate-600"
-            style={{ fontFamily: 'Orbitron, sans-serif' }}
+            className="border-2 border-slate-400 bg-gradient-to-r from-slate-600 to-slate-700 px-4 py-2 font-bold text-white transition-all duration-200 hover:scale-105 hover:from-slate-500 hover:to-slate-600"
+            style={{ fontFamily: 'Orbitron' }}
           >
-            <i className="ri-arrow-left-line mr-2"></i>
+            <i className="ri-arrow-left-line mr-2" />
             BACK
           </button>
           <h1
-            className="flex items-center bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-3xl font-black text-transparent"
-            style={{ fontFamily: '"Press Start 2P", cursive' }}
+            className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text px-4 py-2 text-3xl font-black text-transparent"
+            style={{ fontFamily: 'Orbitron' }}
           >
-            <i className="ri-trophy-line mr-3 text-amber-400"></i>
-            <span>LEADERBOARD</span>
+            <i className="ri-trophy-line mr-3" />
+            LEADERBOARD
           </h1>
+        </div>
 
-          {/* Toggle Button - Moved to Left Area */}
+        {/* Radio-style Mode Toggles */}
+        <div className="flex gap-4">
           <button
-            onClick={toggleType}
-            className={`relative h-10 w-48 overflow-hidden border-2 transition-all duration-300 ${
+            onClick={() => currentType !== 'multi' && toggleType()}
+            className={`flex items-center border-2 px-6 py-2 transition-all duration-200 ${
               currentType === 'multi'
-                ? 'border-pink-400 bg-pink-900/50'
-                : 'border-purple-400 bg-purple-900/50'
+                ? 'scale-105 border-pink-400 bg-pink-600/80 text-white shadow-lg shadow-pink-500/50'
+                : 'border-slate-600 bg-slate-800/50 text-slate-400 hover:border-pink-400/50 hover:text-pink-300'
             }`}
+            style={{ fontFamily: 'Orbitron' }}
           >
-            <div
-              className={`absolute inset-0 flex items-center justify-center font-bold text-white transition-transform duration-300 ${
-                currentType === 'multi' ? 'translate-x-0' : '-translate-x-full'
-              }`}
-              style={{ fontFamily: 'Orbitron, sans-serif' }}
-            >
-              MULTI MODE
-            </div>
-            <div
-              className={`absolute inset-0 flex items-center justify-center font-bold text-white transition-transform duration-300 ${
-                currentType === 'single' ? 'translate-x-0' : 'translate-x-full'
-              }`}
-              style={{ fontFamily: 'Orbitron, sans-serif' }}
-            >
-              SINGLE MODE
-            </div>
+            <i className="ri-sword-line mr-2 text-xl" />
+            <span className="font-bold">MULTI</span>
+          </button>
+          <button
+            onClick={() => currentType !== 'single' && toggleType()}
+            className={`flex items-center border-2 px-6 py-2 transition-all duration-200 ${
+              currentType === 'single'
+                ? 'scale-105 border-purple-400 bg-purple-600/80 text-white shadow-lg shadow-purple-500/50'
+                : 'border-slate-600 bg-slate-800/50 text-slate-400 hover:border-purple-400/50 hover:text-purple-300'
+            }`}
+            style={{ fontFamily: 'Orbitron' }}
+          >
+            <i className="ri-book-open-line mr-2 text-xl" />
+            <span className="font-bold">SINGLE</span>
           </button>
         </div>
       </div>
