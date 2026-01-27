@@ -1,6 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export class MultiRankingItemDto {
+  @ApiProperty({ description: '순위' })
+  rank: number;
+
   @ApiProperty({ description: '유저 닉네임' })
   nickname: string;
 
@@ -20,10 +23,7 @@ export class MultiRankingItemDto {
   tier: string;
 }
 
-export class MultiMyRankingDto extends MultiRankingItemDto {
-  @ApiProperty({ description: '내 순위' })
-  rank: number;
-}
+export class MultiMyRankingDto extends MultiRankingItemDto {}
 
 export class MultiLeaderboardResponseDto {
   @ApiProperty({ type: [MultiRankingItemDto], description: '상위 100명 랭킹' })
@@ -34,6 +34,9 @@ export class MultiLeaderboardResponseDto {
 }
 
 export class SingleRankingItemDto {
+  @ApiProperty({ description: '순위' })
+  rank: number;
+
   @ApiProperty({ description: '유저 닉네임' })
   nickname: string;
 
@@ -53,10 +56,7 @@ export class SingleRankingItemDto {
   correctCount: number;
 }
 
-export class SingleMyRankingDto extends SingleRankingItemDto {
-  @ApiProperty({ description: '내 순위' })
-  rank: number;
-}
+export class SingleMyRankingDto extends SingleRankingItemDto {}
 
 export class SingleLeaderboardResponseDto {
   @ApiProperty({ type: [SingleRankingItemDto], description: '상위 100명 랭킹' })

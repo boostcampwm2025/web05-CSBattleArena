@@ -30,13 +30,8 @@ interface SingleRankingRaw {
   nickname: string;
   userProfile: string | null;
   expPoint: string;
-  userId: string;
-}
-
-interface SingleMyStatsRaw {
-  nickname: string;
-  userProfile: string | null;
-  expPoint: string;
+  solvedCount: string;
+  correctCount: string;
 }
 
 @Injectable()
@@ -44,8 +39,6 @@ export class LeaderboardService {
   constructor(
     @InjectRepository(UserStatistics)
     private readonly userStatisticsRepository: Repository<UserStatistics>,
-    @InjectRepository(UserProblemBank)
-    private readonly userProblemBankRepository: Repository<UserProblemBank>,
   ) {}
 
   async getLeaderboard(
@@ -84,10 +77,15 @@ export class LeaderboardService {
         't.name AS tier',
       ])
       .orderBy('us.tierPoint', 'DESC')
+      .addOrderBy(
+        'CASE WHEN us.winCount + us.loseCount > 0 THEN us.winCount * 1.0 / (us.winCount + us.loseCount) ELSE 0 END',
+        'DESC',
+      )
+      .addOrderBy('us.winCount + us.loseCount', 'DESC')
       .limit(LEADERBOARD_LIMIT)
       .getRawMany<MultiRankingRaw>();
 
-    return results.map((item) => ({
+    const items = results.map((item) => ({
       nickname: item.nickname,
       userProfile: item.userProfile,
       tierPoint: Number(item.tierPoint),
@@ -95,6 +93,32 @@ export class LeaderboardService {
       loseCount: Number(item.loseCount),
       tier: item.tier,
     }));
+
+    return this.assignMultiRanks(items);
+  }
+
+  private assignMultiRanks(items: Omit<MultiRankingItemDto, 'rank'>[]): MultiRankingItemDto[] {
+    const getWinRate = (item: Omit<MultiRankingItemDto, 'rank'>) => {
+      const total = item.winCount + item.loseCount;
+
+      return total > 0 ? item.winCount / total : 0;
+    };
+
+    const getTotalGames = (item: Omit<MultiRankingItemDto, 'rank'>) =>
+      item.winCount + item.loseCount;
+
+    return items.reduce<MultiRankingItemDto[]>((acc, item, idx) => {
+      const prev = acc[idx - 1];
+      const isSameRank =
+        prev &&
+        item.tierPoint === prev.tierPoint &&
+        getWinRate(item) === getWinRate(prev) &&
+        getTotalGames(item) === getTotalGames(prev);
+
+      const rank = isSameRank ? prev.rank : idx + 1;
+
+      return [...acc, { rank, ...item }];
+    }, []);
   }
 
   private async getMultiMyRanking(userId: number): Promise<MultiMyRankingDto> {
@@ -121,18 +145,32 @@ export class LeaderboardService {
       throw new NotFoundException('내 랭킹 정보를 찾을 수 없습니다.');
     }
 
+    const tierPoint = Number(myStats.tierPoint);
+    const winCount = Number(myStats.winCount);
+    const loseCount = Number(myStats.loseCount);
+    const totalGames = winCount + loseCount;
+    const winRate = totalGames > 0 ? winCount / totalGames : 0;
+
     const rank = await this.userStatisticsRepository
       .createQueryBuilder('us')
-      .where('us.tierPoint > :tierPoint', { tierPoint: myStats.tierPoint })
+      .where(
+        `us.tierPoint > :tierPoint
+        OR (us.tierPoint = :tierPoint AND
+            CASE WHEN us.winCount + us.loseCount > 0 THEN us.winCount * 1.0 / (us.winCount + us.loseCount) ELSE 0 END > :winRate)
+        OR (us.tierPoint = :tierPoint AND
+            CASE WHEN us.winCount + us.loseCount > 0 THEN us.winCount * 1.0 / (us.winCount + us.loseCount) ELSE 0 END = :winRate AND
+            us.winCount + us.loseCount > :totalGames)`,
+        { tierPoint, winRate, totalGames },
+      )
       .getCount();
 
     return {
       rank: rank + 1,
       nickname: myStats.nickname,
       userProfile: myStats.userProfile,
-      tierPoint: Number(myStats.tierPoint),
-      winCount: Number(myStats.winCount),
-      loseCount: Number(myStats.loseCount),
+      tierPoint,
+      winCount,
+      loseCount,
       tier: myStats.tier,
     };
   }
@@ -148,59 +186,135 @@ export class LeaderboardService {
     const results = await this.userStatisticsRepository
       .createQueryBuilder('us')
       .innerJoin('us.user', 'u')
+      .leftJoin(
+        (qb) =>
+          qb
+            .select('pb.userId', 'odbc')
+            .addSelect('COUNT(*)', 'solved_count')
+            .addSelect(
+              "SUM(CASE WHEN pb.answerStatus = 'correct' THEN 1 ELSE 0 END)",
+              'correct_count',
+            )
+            .from(UserProblemBank, 'pb')
+            .innerJoin('pb.match', 'm')
+            .where("m.matchType = 'single'")
+            .groupBy('pb.userId'),
+        'pb_stats',
+        'us.userId = pb_stats.odbc',
+      )
       .select([
         'u.nickname AS nickname',
         'u.userProfile AS "userProfile"',
         'us.expPoint AS "expPoint"',
-        'us.userId AS "userId"',
+        'COALESCE(pb_stats.solved_count, 0) AS "solvedCount"',
+        'COALESCE(pb_stats.correct_count, 0) AS "correctCount"',
       ])
       .orderBy('us.expPoint', 'DESC')
+      .addOrderBy(
+        'CASE WHEN COALESCE(pb_stats.solved_count, 0) > 0 THEN COALESCE(pb_stats.correct_count, 0) * 1.0 / pb_stats.solved_count ELSE 0 END',
+        'DESC',
+      )
+      .addOrderBy('COALESCE(pb_stats.solved_count, 0)', 'DESC')
       .limit(LEADERBOARD_LIMIT)
       .getRawMany<SingleRankingRaw>();
 
-    const userIds = results.map((r) => Number(r.userId));
-    const problemCounts = await this.getProblemCounts(userIds);
+    const items = results.map((item) => ({
+      nickname: item.nickname,
+      userProfile: item.userProfile,
+      expPoint: Number(item.expPoint),
+      level: calculateLevel(Number(item.expPoint)).level,
+      solvedCount: Number(item.solvedCount),
+      correctCount: Number(item.correctCount),
+    }));
 
-    return results.map((item) => {
-      const counts = problemCounts.get(Number(item.userId)) || { solvedCount: 0, correctCount: 0 };
-      const expPoint = Number(item.expPoint);
+    return this.assignSingleRanks(items);
+  }
 
-      return {
-        nickname: item.nickname,
-        userProfile: item.userProfile,
-        expPoint,
-        level: calculateLevel(expPoint).level,
-        solvedCount: counts.solvedCount,
-        correctCount: counts.correctCount,
-      };
-    });
+  private assignSingleRanks(items: Omit<SingleRankingItemDto, 'rank'>[]): SingleRankingItemDto[] {
+    const getCorrectRate = (item: Omit<SingleRankingItemDto, 'rank'>) =>
+      item.solvedCount > 0 ? item.correctCount / item.solvedCount : 0;
+
+    return items.reduce<SingleRankingItemDto[]>((acc, item, idx) => {
+      const prev = acc[idx - 1];
+      const isSameRank =
+        prev &&
+        item.expPoint === prev.expPoint &&
+        getCorrectRate(item) === getCorrectRate(prev) &&
+        item.solvedCount === prev.solvedCount;
+
+      const rank = isSameRank ? prev.rank : idx + 1;
+
+      return [...acc, { rank, ...item }];
+    }, []);
   }
 
   private async getSingleMyRanking(userId: number): Promise<SingleMyRankingDto> {
     const myStats = await this.userStatisticsRepository
       .createQueryBuilder('us')
       .innerJoin('us.user', 'u')
+      .leftJoin(
+        (qb) =>
+          qb
+            .select('pb.userId', 'odbc')
+            .addSelect('COUNT(*)', 'solved_count')
+            .addSelect(
+              "SUM(CASE WHEN pb.answerStatus = 'correct' THEN 1 ELSE 0 END)",
+              'correct_count',
+            )
+            .from(UserProblemBank, 'pb')
+            .innerJoin('pb.match', 'm')
+            .where("m.matchType = 'single'")
+            .groupBy('pb.userId'),
+        'pb_stats',
+        'us.userId = pb_stats.odbc',
+      )
       .select([
         'u.nickname AS nickname',
         'u.userProfile AS "userProfile"',
         'us.expPoint AS "expPoint"',
+        'COALESCE(pb_stats.solved_count, 0) AS "solvedCount"',
+        'COALESCE(pb_stats.correct_count, 0) AS "correctCount"',
       ])
       .where('us.userId = :userId', { userId })
-      .getRawOne<SingleMyStatsRaw>();
+      .getRawOne<SingleRankingRaw>();
 
     if (!myStats) {
       throw new NotFoundException('내 랭킹 정보를 찾을 수 없습니다.');
     }
 
     const expPoint = Number(myStats.expPoint);
+    const solvedCount = Number(myStats.solvedCount);
+    const correctCount = Number(myStats.correctCount);
+    const correctRate = solvedCount > 0 ? correctCount / solvedCount : 0;
 
     const rank = await this.userStatisticsRepository
       .createQueryBuilder('us')
-      .where('us.expPoint > :expPoint', { expPoint })
+      .leftJoin(
+        (qb) =>
+          qb
+            .select('pb.userId', 'odbc')
+            .addSelect('COUNT(*)', 'solved_count')
+            .addSelect(
+              "SUM(CASE WHEN pb.answerStatus = 'correct' THEN 1 ELSE 0 END)",
+              'correct_count',
+            )
+            .from(UserProblemBank, 'pb')
+            .innerJoin('pb.match', 'm')
+            .where("m.matchType = 'single'")
+            .groupBy('pb.userId'),
+        'pb_stats',
+        'us.userId = pb_stats.odbc',
+      )
+      .where(
+        `us.expPoint > :expPoint
+        OR (us.expPoint = :expPoint AND
+            CASE WHEN COALESCE(pb_stats.solved_count, 0) > 0 THEN COALESCE(pb_stats.correct_count, 0) * 1.0 / pb_stats.solved_count ELSE 0 END > :correctRate)
+        OR (us.expPoint = :expPoint AND
+            CASE WHEN COALESCE(pb_stats.solved_count, 0) > 0 THEN COALESCE(pb_stats.correct_count, 0) * 1.0 / pb_stats.solved_count ELSE 0 END = :correctRate AND
+            COALESCE(pb_stats.solved_count, 0) > :solvedCount)`,
+        { expPoint, correctRate, solvedCount },
+      )
       .getCount();
-
-    const problemCounts = await this.getProblemCounts([userId]);
-    const counts = problemCounts.get(userId) || { solvedCount: 0, correctCount: 0 };
 
     return {
       rank: rank + 1,
@@ -208,38 +322,8 @@ export class LeaderboardService {
       userProfile: myStats.userProfile,
       expPoint,
       level: calculateLevel(expPoint).level,
-      solvedCount: counts.solvedCount,
-      correctCount: counts.correctCount,
+      solvedCount,
+      correctCount,
     };
-  }
-
-  private async getProblemCounts(
-    userIds: number[],
-  ): Promise<Map<number, { solvedCount: number; correctCount: number }>> {
-    if (userIds.length === 0) {
-      return new Map();
-    }
-
-    const results = await this.userProblemBankRepository
-      .createQueryBuilder('pb')
-      .leftJoin('pb.match', 'm')
-      .select('pb.userId', 'userId')
-      .addSelect('COUNT(*)', 'solvedCount')
-      .addSelect("SUM(CASE WHEN pb.answerStatus = 'correct' THEN 1 ELSE 0 END)", 'correctCount')
-      .where('pb.userId IN (:...userIds)', { userIds })
-      .andWhere("m.matchType = 'single'")
-      .groupBy('pb.userId')
-      .getRawMany<{ userId: string; solvedCount: string; correctCount: string }>();
-
-    const map = new Map<number, { solvedCount: number; correctCount: number }>();
-
-    for (const result of results) {
-      map.set(Number(result.userId), {
-        solvedCount: Number(result.solvedCount) || 0,
-        correctCount: Number(result.correctCount) || 0,
-      });
-    }
-
-    return map;
   }
 }
