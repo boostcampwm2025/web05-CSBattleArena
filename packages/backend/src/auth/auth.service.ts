@@ -7,6 +7,7 @@ import { User, UserStatistics } from '../user/entity';
 import { GithubProfile } from './strategies/github.strategy';
 import { AuthenticatedUser, JwtPayload } from './strategies/jwt.strategy';
 import { calculateTier } from '../common/utils/tier.util';
+import { ELO_CONFIG } from '../common/utils/elo.util';
 
 interface TokenPair {
   accessToken: string;
@@ -104,7 +105,7 @@ export class AuthService {
         userId: savedUser.id,
         winCount: 0,
         loseCount: 0,
-        tierPoint: 1000,
+        tierPoint: ELO_CONFIG.INITIAL_RATING,
         totalMatches: 0,
         expPoint: 0,
       });
