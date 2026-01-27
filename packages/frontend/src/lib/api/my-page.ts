@@ -2,6 +2,7 @@ import { MatchHistoryResponse, MyPageResponse, TierHistoryResponse } from '@/sha
 
 const API_BASE = '/api';
 
+// 목 데이터용 타입 (임시)
 type MyPageData = MyPageResponse & TierHistoryResponse & MatchHistoryResponse;
 
 class ApiError extends Error {
@@ -49,20 +50,18 @@ async function fetchWithAuth<T>(
   return {} as T;
 }
 
-async function fetchMyPageData(accessToken: string | null): Promise<MyPageData> {
-  // 3개 API 비동기 호출
-  const [myPageResponse, tierHistoryResponse, matchHistoryResponse] = await Promise.all([
-    fetchWithAuth<MyPageResponse>(`${API_BASE}/users/me`, accessToken),
-    fetchWithAuth<TierHistoryResponse>(`${API_BASE}/users/me/tier-history`, accessToken),
-    fetchWithAuth<MatchHistoryResponse>(`${API_BASE}/users/me/match-history`, accessToken),
-  ]);
-
-  return {
-    ...myPageResponse,
-    ...tierHistoryResponse,
-    ...matchHistoryResponse,
-  };
+// 개별 API 호출 함수들
+async function fetchMyPageProfile(accessToken: string | null): Promise<MyPageResponse> {
+  return fetchWithAuth<MyPageResponse>(`${API_BASE}/users/me`, accessToken);
 }
 
-export { fetchMyPageData, ApiError };
+async function fetchTierHistory(accessToken: string | null): Promise<TierHistoryResponse> {
+  return fetchWithAuth<TierHistoryResponse>(`${API_BASE}/users/me/tier-history`, accessToken);
+}
+
+async function fetchMatchHistory(accessToken: string | null): Promise<MatchHistoryResponse> {
+  return fetchWithAuth<MatchHistoryResponse>(`${API_BASE}/users/me/match-history`, accessToken);
+}
+
+export { fetchMyPageProfile, fetchTierHistory, fetchMatchHistory, ApiError };
 export type { MyPageData };

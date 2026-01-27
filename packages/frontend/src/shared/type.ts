@@ -75,6 +75,7 @@ export type MatchStats = {
   totalMatches: number;
   winCount: number;
   loseCount: number;
+  drawCount: number;
   winRate: number;
 };
 
