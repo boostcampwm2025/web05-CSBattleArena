@@ -292,7 +292,7 @@ export default function Leaderboard() {
                   <RankingItem
                     key={index}
                     item={player}
-                    rank={index + 1}
+                    rank={player.rank}
                     isMulti={currentType === 'multi'}
                   />
                 ))}

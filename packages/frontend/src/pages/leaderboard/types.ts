@@ -1,6 +1,7 @@
 export type Tier = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
 
 export interface MultiRankingItem {
+  rank: number;
   nickname: string;
   userProfile: string | null;
   tierPoint: number;
@@ -9,11 +10,10 @@ export interface MultiRankingItem {
   tier: string;
 }
 
-export interface MyMultiRanking extends MultiRankingItem {
-  rank: number;
-}
+export type MyMultiRanking = MultiRankingItem;
 
 export interface SingleRankingItem {
+  rank: number;
   nickname: string;
   userProfile: string | null;
   expPoint: number;
@@ -22,9 +22,7 @@ export interface SingleRankingItem {
   correctCount: number;
 }
 
-export interface MySingleRanking extends SingleRankingItem {
-  rank: number;
-}
+export type MySingleRanking = SingleRankingItem;
 
 export interface MultiLeaderboardResponse {
   rankings: MultiRankingItem[];
