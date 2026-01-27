@@ -1,10 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { DataSource, EntityManager } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { MatchPersistenceService } from '../src/game/match-persistence.service';
 import { GameSessionManager } from '../src/game/game-session-manager';
 import { QuizService } from '../src/quiz/quiz.service';
 import { Match, Round, RoundAnswer } from '../src/match/entity';
 import { UserProblemBank } from '../src/problem-bank/entity';
+import { UserStatistics } from '../src/user/entity';
 import { GameSession } from '../src/game/interfaces/game.interfaces';
 
 describe('MatchPersistenceService', () => {
@@ -24,6 +26,10 @@ describe('MatchPersistenceService', () => {
 
   const mockEntityManager = {
     createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
+    findOne: jest.fn(),
+    update: jest.fn(),
+    insert: jest.fn(),
+    query: jest.fn(),
   };
 
   const mockDataSource = {
@@ -125,6 +131,16 @@ describe('MatchPersistenceService', () => {
     });
 
     it('매치 데이터를 성공적으로 저장해야 함', async () => {
+      // Mock UserStatistics (ELO 업데이트용)
+      mockEntityManager.findOne.mockResolvedValue({
+        userId: 1,
+        tierPoint: 1000,
+        totalMatches: 10,
+      });
+
+      // Mock tier query (티어 히스토리용)
+      mockEntityManager.query.mockResolvedValue([{ id: 2 }]); // silver tier
+
       // Mock Insert Match
       mockQueryBuilder.execute
         .mockResolvedValueOnce({ generatedMaps: [{ id: 999 }] }) // Match ID
@@ -135,7 +151,7 @@ describe('MatchPersistenceService', () => {
       await service.saveMatchToDatabase(roomId, finalResult);
 
       expect(mockDataSource.transaction).toHaveBeenCalled();
-      
+
       // Verify Match Insert
       expect(mockEntityManager.createQueryBuilder).toHaveBeenCalled();
       expect(mockQueryBuilder.into).toHaveBeenCalledWith(Match);
@@ -154,9 +170,23 @@ describe('MatchPersistenceService', () => {
 
       // Verify RoundAnswer Insert
       expect(mockQueryBuilder.into).toHaveBeenCalledWith(RoundAnswer);
-      
+
       // Verify UserProblemBank Insert
       expect(mockQueryBuilder.into).toHaveBeenCalledWith(UserProblemBank);
+
+      // Verify ELO Update
+      expect(mockEntityManager.findOne).toHaveBeenCalledWith(UserStatistics, { where: { userId: 1 } });
+      expect(mockEntityManager.findOne).toHaveBeenCalledWith(UserStatistics, { where: { userId: 2 } });
+      expect(mockEntityManager.update).toHaveBeenCalledWith(
+        UserStatistics,
+        { userId: 1 },
+        expect.objectContaining({ tierPoint: expect.any(Number) })
+      );
+      expect(mockEntityManager.update).toHaveBeenCalledWith(
+        UserStatistics,
+        { userId: 2 },
+        expect.objectContaining({ tierPoint: expect.any(Number) })
+      );
     });
 
     it('트랜잭션 중 에러 발생 시 재시도 후 로깅하고 정상 종료해야 함', async () => {

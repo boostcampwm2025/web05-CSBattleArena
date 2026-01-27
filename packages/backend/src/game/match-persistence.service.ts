@@ -5,6 +5,10 @@ import { QuizService } from '../quiz/quiz.service';
 import { FinalResult, GameSession } from './interfaces/game.interfaces';
 import { Match, Round, RoundAnswer } from '../match/entity';
 import { UserProblemBank } from '../problem-bank/entity';
+import { UserStatistics } from '../user/entity';
+import { Tier, UserTierHistory } from '../tier/entity';
+import { calculateMatchEloUpdate } from '../common/utils/elo.util';
+import { calculateTier } from '../common/utils/tier.util';
 
 class NonRetryableError extends Error {
   constructor(message: string) {
@@ -45,6 +49,11 @@ export class MatchPersistenceService {
           const roundIdMap = await this.insertRounds(manager, matchId, session);
           await this.insertRoundAnswers(manager, roundIdMap, session);
           await this.insertUserProblemBanks(manager, matchId, session);
+
+          // ELO 업데이트 (무승부가 아닐 때만)
+          if (!finalResult.isDraw && finalResult.winnerId) {
+            await this.updateEloRatings(manager, matchId, session, finalResult);
+          }
         });
 
         return;
@@ -293,5 +302,125 @@ export class MatchPersistenceService {
     }
 
     return parsed;
+  }
+
+  /**
+   * ELO 레이팅 업데이트
+   *
+   * @param manager - 트랜잭션 매니저
+   * @param matchId - 매치 ID
+   * @param session - 게임 세션
+   * @param finalResult - 게임 결과
+   */
+  private async updateEloRatings(
+    manager: EntityManager,
+    matchId: number,
+    session: GameSession,
+    finalResult: FinalResult,
+  ): Promise<void> {
+    const winnerId = this.parseUserId(finalResult.winnerId);
+    const loserId =
+      this.parseUserId(session.player1Id) === winnerId
+        ? this.parseUserId(session.player2Id)
+        : this.parseUserId(session.player1Id);
+
+    // 현재 통계 조회
+    const winnerStats = await manager.findOne(UserStatistics, {
+      where: { userId: winnerId },
+    });
+
+    const loserStats = await manager.findOne(UserStatistics, {
+      where: { userId: loserId },
+    });
+
+    if (!winnerStats) {
+      throw new Error(
+        `UserStatistics not found for winner userId: ${winnerId}. Cannot update ELO.`,
+      );
+    }
+
+    if (!loserStats) {
+      throw new Error(`UserStatistics not found for loser userId: ${loserId}. Cannot update ELO.`);
+    }
+
+    const winnerElo = winnerStats.tierPoint ?? 1000;
+    const loserElo = loserStats.tierPoint ?? 1000;
+    const winnerTotalGames = winnerStats.totalMatches ?? 0;
+    const loserTotalGames = loserStats.totalMatches ?? 0;
+
+    // ELO 계산
+    const { winnerNewRating, loserNewRating, winnerChange, loserChange } = calculateMatchEloUpdate(
+      winnerElo,
+      loserElo,
+      winnerTotalGames,
+      loserTotalGames,
+    );
+
+    this.logger.log(
+      `ELO 업데이트 - 승자: ${winnerId} (${winnerElo} → ${winnerNewRating}, +${winnerChange}), ` +
+        `패자: ${loserId} (${loserElo} → ${loserNewRating}, ${loserChange})`,
+    );
+
+    // UserStatistics 업데이트 (승패 기록 + ELO)
+    await manager.update(
+      UserStatistics,
+      { userId: winnerId },
+      {
+        tierPoint: winnerNewRating,
+        winCount: () => 'win_count + 1',
+        totalMatches: () => 'total_matches + 1',
+      },
+    );
+
+    await manager.update(
+      UserStatistics,
+      { userId: loserId },
+      {
+        tierPoint: loserNewRating,
+        loseCount: () => 'lose_count + 1',
+        totalMatches: () => 'total_matches + 1',
+      },
+    );
+
+    // 티어 변동 히스토리 기록
+    await this.recordTierHistory(manager, winnerId, matchId, winnerChange, winnerNewRating);
+    await this.recordTierHistory(manager, loserId, matchId, loserChange, loserNewRating);
+  }
+
+  /**
+   * 티어 변동 히스토리 기록
+   *
+   * @param manager - 트랜잭션 매니저
+   * @param userId - 유저 ID
+   * @param matchId - 매치 ID
+   * @param tierChange - 티어 변화량
+   * @param newElo - 새로운 ELO
+   */
+  private async recordTierHistory(
+    manager: EntityManager,
+    userId: number,
+    matchId: number,
+    tierChange: number,
+    newElo: number,
+  ): Promise<void> {
+    const tierName = calculateTier(newElo);
+
+    const tier = await manager.findOne(Tier, {
+      where: { name: tierName },
+    });
+
+    if (!tier) {
+      throw new Error(
+        `Tier '${tierName}' not found for ELO ${newElo}. Cannot record tier history for user ${userId}.`,
+      );
+    }
+
+    await manager.insert(UserTierHistory, {
+      userId,
+      tierId: tier.id,
+      tierPoint: newElo,
+      matchId,
+      tierChange,
+    });
   }
 }
