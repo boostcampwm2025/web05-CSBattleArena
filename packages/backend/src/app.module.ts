@@ -13,6 +13,7 @@ import { ProblemBankModule } from './problem-bank/problem-bank.module';
 import { feedbackLoggerConfig } from './common/winston.config';
 import { WinstonModule } from 'nest-winston';
 import { AuthModule } from './auth/auth.module';
+import { TierModule } from './tier/tier.module';
 
 const configModule = ConfigModule.forRoot({
   isGlobal: true,
@@ -43,6 +44,7 @@ const metadata: ModuleMetadata = {
     configModule,
     typeOrmModule,
     WinstonModule.forRoot(feedbackLoggerConfig),
+    TierModule, // 티어 시드 데이터 자동 삽입
     AuthModule,
     QuizModule,
     MatchmakingModule,
