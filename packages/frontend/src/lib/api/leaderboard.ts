@@ -6,7 +6,7 @@ export const getLeaderboard = async <T extends LeaderboardType>(
   accessToken: string,
   signal?: AbortSignal,
 ): Promise<LeaderboardResponse<T>> => {
-  return request<LeaderboardResponse<T>>('/leaderboard', accessToken, {
+  return request<LeaderboardResponse<T>>('/api/leaderboard', accessToken, {
     method: 'GET',
     query: { type },
     signal,

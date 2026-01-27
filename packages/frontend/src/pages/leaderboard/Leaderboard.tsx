@@ -186,8 +186,8 @@ export default function Leaderboard() {
       </div>
 
       {/* Header */}
-      <div className="relative z-10 flex items-center justify-between border-b-4 border-cyan-400 bg-gradient-to-r from-slate-800/90 to-slate-900/90 px-8 py-4">
-        <div className="flex items-center space-x-6">
+      <div className="relative z-10 flex items-center border-b-4 border-cyan-400 bg-gradient-to-r from-slate-800/90 to-slate-900/90 px-8 py-4">
+        <div className="flex flex-1 items-center space-x-6">
           <button
             onClick={() => setScene('home')}
             className="whitespace-nowrap border-2 border-slate-400 bg-gradient-to-r from-slate-600 to-slate-700 px-4 py-2 font-bold text-white transition-all duration-200 hover:scale-105 hover:from-slate-500 hover:to-slate-600"
@@ -197,40 +197,40 @@ export default function Leaderboard() {
             BACK
           </button>
           <h1
-            className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-3xl font-black text-transparent"
+            className="flex items-center bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-3xl font-black text-transparent"
             style={{ fontFamily: '"Press Start 2P", cursive' }}
           >
-            <i className="ri-trophy-line mr-3"></i>
-            LEADERBOARD
+            <i className="ri-trophy-line mr-3 text-amber-400"></i>
+            <span>LEADERBOARD</span>
           </h1>
-        </div>
 
-        {/* Toggle Button */}
-        <button
-          onClick={toggleType}
-          className={`relative h-10 w-48 overflow-hidden border-2 transition-all duration-300 ${
-            currentType === 'multi'
-              ? 'border-pink-400 bg-pink-900/50'
-              : 'border-purple-400 bg-purple-900/50'
-          }`}
-        >
-          <div
-            className={`absolute inset-0 flex items-center justify-center font-bold text-white transition-transform duration-300 ${
-              currentType === 'multi' ? 'translate-x-0' : '-translate-x-full'
+          {/* Toggle Button - Moved to Left Area */}
+          <button
+            onClick={toggleType}
+            className={`relative h-10 w-48 overflow-hidden border-2 transition-all duration-300 ${
+              currentType === 'multi'
+                ? 'border-pink-400 bg-pink-900/50'
+                : 'border-purple-400 bg-purple-900/50'
             }`}
-            style={{ fontFamily: 'Orbitron, sans-serif' }}
           >
-            MULTI MODE
-          </div>
-          <div
-            className={`absolute inset-0 flex items-center justify-center font-bold text-white transition-transform duration-300 ${
-              currentType === 'single' ? 'translate-x-0' : 'translate-x-full'
-            }`}
-            style={{ fontFamily: 'Orbitron, sans-serif' }}
-          >
-            SINGLE MODE
-          </div>
-        </button>
+            <div
+              className={`absolute inset-0 flex items-center justify-center font-bold text-white transition-transform duration-300 ${
+                currentType === 'multi' ? 'translate-x-0' : '-translate-x-full'
+              }`}
+              style={{ fontFamily: 'Orbitron, sans-serif' }}
+            >
+              MULTI MODE
+            </div>
+            <div
+              className={`absolute inset-0 flex items-center justify-center font-bold text-white transition-transform duration-300 ${
+                currentType === 'single' ? 'translate-x-0' : 'translate-x-full'
+              }`}
+              style={{ fontFamily: 'Orbitron, sans-serif' }}
+            >
+              SINGLE MODE
+            </div>
+          </button>
+        </div>
       </div>
 
       {/* Main Content */}
