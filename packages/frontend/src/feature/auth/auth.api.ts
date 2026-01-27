@@ -1,5 +1,10 @@
 import { request } from '@/lib/api/request';
-import { UserData } from '@/shared/type';
+
+type UserData = {
+  profile: { nickname: string };
+  rank: { tier: string; tierPoint: number };
+  levelInfo: { level: number; needExpPoint: number; remainedExpPoint: number };
+};
 
 export function login() {
   window.location.replace(`/api/auth/github`);

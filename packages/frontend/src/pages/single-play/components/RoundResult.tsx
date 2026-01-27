@@ -3,6 +3,9 @@ import { useRoundResult } from '@/pages/single-play/hooks/useRoundResult';
 export default function RoundResult() {
   const {
     nickname,
+    level,
+    remainedExpPoint,
+    needExpPoint,
     curQuestion,
     submittedAnswer,
     isCorrect,
@@ -40,19 +43,22 @@ export default function RoundResult() {
                 style={{ fontFamily: 'Orbitron' }}
               >
                 <span>EXP</span>
-                <span>100 / 10000</span>
+                <span className="font-bold text-pink-400">LV.{level}</span>
+                <span>
+                  {remainedExpPoint} / {needExpPoint}
+                </span>
               </div>
 
               <div className="relative h-5 w-full overflow-hidden border-2 border-cyan-500 bg-slate-700">
                 <div
                   className="h-full bg-gradient-to-r from-cyan-400 to-purple-500 transition-all duration-500"
-                  style={{ width: `${5 / 100}%` }}
+                  style={{ width: `${(remainedExpPoint / needExpPoint) * 100}%` }}
                 />
                 <div
                   className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white"
                   style={{ fontFamily: 'Orbitron' }}
                 >
-                  {Math.round(5 / 100)}%
+                  {Math.round((remainedExpPoint / needExpPoint) * 100)}%
                 </div>
               </div>
             </div>

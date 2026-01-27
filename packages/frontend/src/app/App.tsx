@@ -53,7 +53,20 @@ export default function App() {
 
           const userData = await fetchUserData(token, controller.signal);
 
-          setUserData(userData);
+          setUserData((prev) => {
+            if (!prev || !userData) {
+              return prev;
+            }
+
+            return {
+              ...prev,
+              nickname: userData.profile.nickname,
+              tier: userData.rank.tier,
+              level: userData.levelInfo.level,
+              needExpPoint: userData.levelInfo.needExpPoint,
+              remainedExpPoint: userData.levelInfo.remainedExpPoint,
+            };
+          });
         }
       } catch (err) {
         console.error('Silent refresh failed:', err);

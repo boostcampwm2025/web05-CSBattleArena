@@ -12,7 +12,6 @@ import { Question } from '../quiz/quiz.types';
 import { mapDifficulty, SCORE_MAP } from '../quiz/quiz.constants';
 import { Match } from '../match/entity';
 import { UserProblemBank } from '../problem-bank/entity';
-import { UserStatistics } from '../user/entity/user-statistics.entity';
 import { calcLevel } from '../common/utils/level.util';
 
 @Injectable()
@@ -231,15 +230,17 @@ export class SinglePlayService {
         aiFeedback: grade.feedback,
       });
 
-      const updated = await manager
-        .createQueryBuilder()
-        .update(UserStatistics)
-        .set({ expPoint: () => `COALESCE("exp_point", 0) + ${finalScore}` })
-        .where(`"user_id" = :userId`, { userId: uid })
-        .returning(['exp_point'])
-        .execute();
+      const result: [{ exp_point: number }[], number] = await manager.query(
+        `
+        UPDATE user_statistics
+        SET exp_point = COALESCE(exp_point, 0) + $1
+        WHERE user_id = $2
+        RETURNING exp_point
+        `,
+        [finalScore, uid],
+      );
 
-      const rows = updated.raw as { exp_point: number }[];
+      const rows = result[0];
       const curExp = rows[0]?.exp_point ?? 0;
 
       return curExp;

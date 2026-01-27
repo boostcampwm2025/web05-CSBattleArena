@@ -101,9 +101,12 @@ export function useRoundResult() {
     }
   }, [phase, setPhase, setCurQuestion, accessToken, selectedCategoryIds]);
 
-  if (phase.kind !== 'result') {
+  if (phase.kind !== 'result' || !userData) {
     return {
       nickname: userData?.nickname,
+      level: 1,
+      remainedExpPoint: 0,
+      needExpPoint: 100,
       curQuestion,
       submittedAnswer: '',
       isCorrect: false,
@@ -114,7 +117,10 @@ export function useRoundResult() {
   }
 
   return {
-    nickname: userData?.nickname,
+    nickname: userData.nickname,
+    level: userData.level,
+    remainedExpPoint: userData.remainedExpPoint,
+    needExpPoint: userData.needExpPoint,
     curQuestion,
     submittedAnswer: phase.result.submittedAnswer,
     isCorrect: phase.result.isCorrect,
