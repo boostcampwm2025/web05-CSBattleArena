@@ -14,7 +14,7 @@ import {
 } from './dto/mypage-response.dto';
 import { TierHistoryResponseDto } from './dto/tier-history-response.dto';
 import { MatchHistoryItemDto, MatchHistoryResponseDto } from './dto/match-history-response.dto';
-import { calculateLevel } from '../common/utils/level.util';
+import { calcLevel } from '../common/utils/level.util';
 import { calculateTier } from '../common/utils/tier.util';
 import { ProblemStatsRaw } from './interfaces';
 
@@ -47,19 +47,14 @@ export class UserService {
     const expPoint = stats?.expPoint ?? 0;
 
     const rank = this.buildRank(tierPoint);
-    const levelInfo = calculateLevel(expPoint);
-    const level = {
-      level: levelInfo.level,
-      expForCurrentLevel: levelInfo.expForCurrentLevel,
-      expForNextLevel: levelInfo.expForNextLevel,
-    };
+    const { level, needExpPoint, remainedExpPoint } = calcLevel(expPoint);
     const matchStats = this.buildMatchStats(stats);
     const problemStats = await this.buildProblemStats(userId);
 
     return {
       profile,
       rank,
-      level,
+      levelInfo: { level, needExpPoint, remainedExpPoint },
       matchStats,
       problemStats,
     };

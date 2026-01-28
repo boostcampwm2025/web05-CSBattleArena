@@ -13,6 +13,7 @@ import { mapDifficulty, SCORE_MAP } from '../quiz/quiz.constants';
 import { Match } from '../match/entity';
 import { UserProblemBank } from '../problem-bank/entity';
 import { UserStatistics } from '../user/entity/user-statistics.entity';
+import { calcLevel } from '../common/utils/level.util';
 
 @Injectable()
 export class SinglePlayService {
@@ -97,15 +98,16 @@ export class SinglePlayService {
     answer: string,
   ): Promise<{
     grade: { submittedAnswer: string; isCorrect: boolean; aiFeedback: string };
-    expGained: number;
-    curExp: number;
+    level: number;
+    needExpPoint: number;
+    remainedExpPoint: number;
   }> {
     try {
       const question = await this.findQuestionById(questionId);
       const grade = await this.gradeAnswer(question, answer);
       const finalScore = this.calculateFinalScore(question, grade);
 
-      const { expGained, curExp } = await this.saveAnswerResult(
+      const curExp = await this.saveAnswerResult(
         userId,
         questionId,
         question,
@@ -118,14 +120,17 @@ export class SinglePlayService {
         `Answer submitted for user ${userId}, question ${questionId}, score: ${finalScore}`,
       );
 
+      const { level, needExpPoint, remainedExpPoint } = calcLevel(curExp);
+
       return {
         grade: {
           submittedAnswer: answer,
           isCorrect: grade.isCorrect,
           aiFeedback: grade.feedback,
         },
-        expGained,
-        curExp,
+        level,
+        needExpPoint,
+        remainedExpPoint,
       };
     } catch (error) {
       if (error instanceof NotFoundException) {
@@ -200,7 +205,7 @@ export class SinglePlayService {
     answer: string,
     grade: { isCorrect: boolean; score: number; feedback: string },
     finalScore: number,
-  ): Promise<{ expGained: number; curExp: number }> {
+  ): Promise<number> {
     return await this.connection.transaction(async (manager) => {
       const uid = this.parseUserId(userId);
 
@@ -237,10 +242,7 @@ export class SinglePlayService {
       const rows = updated.raw as { exp_point: number }[];
       const curExp = rows[0]?.exp_point ?? 0;
 
-      return {
-        expGained: finalScore,
-        curExp,
-      };
+      return curExp;
     });
   }
 

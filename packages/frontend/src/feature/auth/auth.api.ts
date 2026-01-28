@@ -1,17 +1,13 @@
+import { request } from '@/lib/api/request';
+import { UserData } from '@/shared/type';
+
 export function login() {
   window.location.replace(`/api/auth/github`);
 }
 
 export async function logout(signal: AbortSignal) {
   try {
-    const res = await fetch(`/api/auth/logout`, {
-      credentials: 'include',
-      signal,
-    });
-
-    if (!res.ok) {
-      throw new Error(`Failed to logout. status: ${res.status}, message: ${res.statusText}`);
-    }
+    await request('/api/auth/logout', undefined, { credentials: 'include', signal });
   } catch (e) {
     if (e instanceof DOMException && e.name === 'AbortError') {
       return;
@@ -42,24 +38,39 @@ export function handleOAuthCallback() {
     return { ok: false, err: 'There is no user data.' };
   }
 
-  window.history.replaceState(null, '', '/');
-
   return { ok: true, accessToken: token, userData: JSON.parse(decodeURIComponent(userRaw)) };
 }
 
 export async function refreshAccessToken(signal: AbortSignal) {
-  const res = await fetch(`/api/auth/refresh`, {
-    credentials: 'include',
-    signal,
-  });
+  try {
+    const data = await request<{ accessToken: string }>('/api/auth/refresh', undefined, {
+      credentials: 'include',
+      signal,
+    });
 
-  if (!res.ok) {
-    throw new Error(
-      `Failed to get refresh token. status: ${res.status}, message: ${res.statusText}`,
-    );
+    return data.accessToken;
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      return;
+    }
+
+    // TODO: 에러 모달 출력
   }
+}
 
-  const data = (await res.json()) as { accessToken: string };
+export async function fetchUserData(accessToken: string, signal: AbortSignal) {
+  try {
+    const data = await request<UserData>('/api/users/me', accessToken, {
+      credentials: 'include',
+      signal,
+    });
 
-  return data.accessToken;
+    return data;
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      return;
+    }
+
+    // TODO: 에러 모달 출력
+  }
 }

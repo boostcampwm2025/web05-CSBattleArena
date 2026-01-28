@@ -23,12 +23,38 @@ export default function RoundResult() {
 
         {/* Player Answer */}
         <div className="flex flex-col gap-4 border-4 border-cyan-400 bg-gradient-to-r from-slate-800/95 to-slate-900/95 p-5 shadow-2xl shadow-cyan-500/30">
-          <div className="mb-4 flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg border-2 border-white bg-gradient-to-br from-cyan-400 to-purple-500">
-              <i className="ri-user-star-line text-2xl text-white" />
+          <div className="flex items-center gap-12">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg border-2 border-white bg-gradient-to-br from-cyan-400 to-purple-500">
+                <i className="ri-user-star-line text-2xl text-white" />
+              </div>
+              <div className="text-lg font-bold text-cyan-300" style={{ fontFamily: 'Orbitron' }}>
+                {nickname}
+              </div>
             </div>
-            <div className="text-lg font-bold text-cyan-300" style={{ fontFamily: 'Orbitron' }}>
-              {nickname}
+
+            {/* Experience Bar */}
+            <div className="flex w-full flex-col gap-1">
+              <div
+                className="flex justify-between text-xs text-cyan-300"
+                style={{ fontFamily: 'Orbitron' }}
+              >
+                <span>EXP</span>
+                <span>100 / 10000</span>
+              </div>
+
+              <div className="relative h-5 w-full overflow-hidden border-2 border-cyan-500 bg-slate-700">
+                <div
+                  className="h-full bg-gradient-to-r from-cyan-400 to-purple-500 transition-all duration-500"
+                  style={{ width: `${5 / 100}%` }}
+                />
+                <div
+                  className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white"
+                  style={{ fontFamily: 'Orbitron' }}
+                >
+                  {Math.round(5 / 100)}%
+                </div>
+              </div>
             </div>
           </div>
           <div className="flex flex-col gap-3">

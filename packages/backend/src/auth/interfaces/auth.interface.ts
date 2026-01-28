@@ -11,7 +11,9 @@ export interface LoginResult extends TokenPair {
     email: string | null;
     userProfile: string | null;
     tier: string;
-    expPoint: number;
+    level: number;
+    needExpPoint: number;
+    remainedExpPoint: number;
     winCount: number;
     loseCount: number;
   };

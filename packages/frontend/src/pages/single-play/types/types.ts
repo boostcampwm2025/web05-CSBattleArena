@@ -52,4 +52,7 @@ export type SubmitAnswerReq = { questionId: number; answer: string };
 
 export type SubmitAnswerRes = {
   grade: { submittedAnswer: string; isCorrect: boolean; aiFeedback: string };
+  level: number;
+  needExpPoint: number;
+  remainedExpPoint: number;
 };

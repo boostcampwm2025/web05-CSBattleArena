@@ -3,7 +3,9 @@ export type UserData = {
   nickname: string;
   tier: string;
   tierPoint: number;
-  expPoint: number;
+  level: number;
+  needExpPoint: number;
+  remainedExpPoint: number;
   isSentFeedback: boolean;
 };
 
