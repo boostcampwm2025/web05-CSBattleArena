@@ -9,6 +9,7 @@ import { AuthenticatedUser, JwtPayload } from './strategies/jwt.strategy';
 import { calculateTier } from '../common/utils/tier.util';
 import { ELO_CONFIG } from '../common/utils/elo.util';
 import { LoginResult, TokenPair } from './interfaces';
+import { calcLevel } from 'src/common/utils/level.util';
 
 @Injectable()
 export class AuthService {
@@ -171,25 +172,13 @@ export class AuthService {
       return null;
     }
 
-    const tierPoint = user.statistics?.tierPoint ?? 1000;
-
-    return {
-      id: user.id,
-      visibleId: user.id.toString(),
-      nickname: user.nickname,
-      email: user.email,
-      userProfile: user.userProfile,
-      oauthProvider: user.oauthProvider,
-      tier: calculateTier(tierPoint),
-      tierPoint,
-      expPoint: user.statistics?.expPoint ?? 0,
-      winCount: user.statistics?.winCount ?? 0,
-      loseCount: user.statistics?.loseCount ?? 0,
-    };
+    return this.sanitizeUser(user);
   }
 
   private sanitizeUser(user: User) {
     const tierPoint = user.statistics?.tierPoint ?? 1000;
+    const expPoint = user.statistics?.expPoint ?? 0;
+    const { level, needExpPoint, remainedExpPoint } = calcLevel(expPoint);
 
     return {
       id: user.id,
@@ -199,7 +188,9 @@ export class AuthService {
       userProfile: user.userProfile,
       tier: calculateTier(tierPoint),
       tierPoint,
-      expPoint: user.statistics?.expPoint ?? 0,
+      level,
+      needExpPoint,
+      remainedExpPoint,
       winCount: user.statistics?.winCount ?? 0,
       loseCount: user.statistics?.loseCount ?? 0,
     };

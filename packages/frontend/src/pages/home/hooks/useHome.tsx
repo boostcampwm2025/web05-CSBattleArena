@@ -40,8 +40,8 @@ export function useHome() {
 
     await logout(controller.signal);
 
-    setUserData(null);
-    setAccessToken(null);
+    setUserData(undefined);
+    setAccessToken(undefined);
   }, [setUserData, setAccessToken]);
 
   const onClickQuickStartBtn = useCallback(() => {

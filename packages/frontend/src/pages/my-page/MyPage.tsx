@@ -59,7 +59,7 @@ export default function MyPage() {
                   <ProfileSection
                     profile={profileData.profile}
                     rank={profileData.rank}
-                    level={profileData.level}
+                    level={profileData.levelInfo}
                   />
                 </div>
 
@@ -104,7 +104,7 @@ export default function MyPage() {
                         stats={[
                           { label: 'Current Tier', value: profileData.rank.tier },
                           { label: 'Tier Point', value: profileData.rank.tierPoint },
-                          { label: 'Level', value: profileData.level.level },
+                          { label: 'Level', value: profileData.levelInfo.level },
                         ]}
                       />
                     </div>
