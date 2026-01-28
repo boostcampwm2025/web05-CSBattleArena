@@ -27,9 +27,21 @@ export type ApiRequestOptions = {
   signal?: AbortSignal;
 };
 
-export async function request<TResponse>(
+export function request<TResponse>(
   endPoint: string,
-  accessToken: string | null,
+  accessToken: string | undefined,
+  options: ApiRequestOptions,
+): Promise<TResponse>;
+
+export function request(
+  endPoint: string,
+  accessToken: string | undefined,
+  options: ApiRequestOptions,
+): Promise<void>;
+
+export async function request<TResponse = void>(
+  endPoint: string,
+  accessToken: string | undefined,
   options: ApiRequestOptions = {},
 ): Promise<TResponse> {
   const { method = 'GET', query, body, headers, credentials = 'include', signal } = options;
@@ -52,5 +64,8 @@ export async function request<TResponse>(
     throw new Error(`Request failed: ${res.status} ${res.statusText}`);
   }
 
-  return (await res.json()) as TResponse;
+  const text = await res.text();
+  const trimmed = text.trim();
+
+  return trimmed ? (JSON.parse(trimmed) as TResponse) : (undefined as TResponse);
 }
