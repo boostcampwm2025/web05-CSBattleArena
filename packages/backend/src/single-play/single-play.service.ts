@@ -27,6 +27,27 @@ export class SinglePlayService {
   ) {}
 
   /**
+   * 싱글플레이 세션 시작
+   */
+  async startSession(userId: string): Promise<number> {
+    try {
+      const match = await this.connection.manager.save(Match, {
+        player1Id: this.parseUserId(userId),
+        player2Id: null,
+        winnerId: null,
+        matchType: 'single',
+      });
+
+      this.logger.log(`Single play session started for user ${userId}, matchId: ${match.id}`);
+
+      return match.id;
+    } catch (error) {
+      this.logger.error(`Failed to start session: ${(error as Error).message}`);
+      throw new InternalServerErrorException('세션 시작 중 오류가 발생했습니다.');
+    }
+  }
+
+  /**
    * 대분류 카테고리 목록 조회
    */
   async getCategories(): Promise<Array<{ id: number; name: string | null }>> {
@@ -92,6 +113,7 @@ export class SinglePlayService {
    */
   async submitAnswer(
     userId: string,
+    matchId: number,
     questionId: number,
     answer: string,
   ): Promise<{
@@ -103,10 +125,10 @@ export class SinglePlayService {
       const grade = await this.gradeAnswer(question, answer);
       const finalScore = this.calculateFinalScore(question, grade);
 
-      await this.saveAnswerResult(userId, questionId, question, answer, grade);
+      await this.saveAnswerResult(userId, matchId, questionId, question, answer, grade);
 
       this.logger.log(
-        `Answer submitted for user ${userId}, question ${questionId}, score: ${finalScore}`,
+        `Answer submitted for user ${userId}, matchId ${matchId}, question ${questionId}, score: ${finalScore}`,
       );
 
       return {
@@ -181,37 +203,38 @@ export class SinglePlayService {
   }
 
   /**
-   * 답안 결과 DB 저장 (트랜잭션)
+   * 답안 결과 DB 저장
    */
   private async saveAnswerResult(
     userId: string,
+    matchId: number,
     questionId: number,
     question: QuestionEntity,
     answer: string,
     grade: { isCorrect: boolean; score: number; feedback: string },
   ): Promise<void> {
-    await this.connection.transaction(async (manager) => {
-      const match = await manager.save(Match, {
-        player1Id: this.parseUserId(userId),
-        player2Id: null,
-        winnerId: null,
-        matchType: 'single',
-      });
+    // matchId 유효성 검증
+    const matchExists = await this.connection.manager.findOne(Match, {
+      where: { id: matchId },
+    });
 
-      const answerStatus = this.quizService.determineAnswerStatus(
-        question.questionType,
-        grade.isCorrect,
-        grade.score,
-      );
+    if (!matchExists) {
+      throw new NotFoundException('존재하지 않는 세션입니다.');
+    }
 
-      await manager.save(UserProblemBank, {
-        userId: this.parseUserId(userId),
-        questionId,
-        matchId: match.id,
-        userAnswer: answer,
-        answerStatus,
-        aiFeedback: grade.feedback,
-      });
+    const answerStatus = this.quizService.determineAnswerStatus(
+      question.questionType,
+      grade.isCorrect,
+      grade.score,
+    );
+
+    await this.connection.manager.save(UserProblemBank, {
+      userId: this.parseUserId(userId),
+      questionId,
+      matchId,
+      userAnswer: answer,
+      answerStatus,
+      aiFeedback: grade.feedback,
     });
   }
 
