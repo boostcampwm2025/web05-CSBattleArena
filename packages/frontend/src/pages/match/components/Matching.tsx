@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 
+import { useScene } from '@/feature/useScene';
+
 function formatTime(seconds: number) {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
@@ -8,7 +10,12 @@ function formatTime(seconds: number) {
 }
 
 export default function Matching() {
+  const { setScene } = useScene();
   const [time, setTime] = useState<number>(0);
+
+  const handleCancel = () => {
+    setScene('home');
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -127,21 +134,14 @@ export default function Matching() {
           </div>
         </div>
 
-        {/* Loading dots */}
-        <div className="mt-6 flex space-x-2">
-          <div
-            className="h-3 w-3 animate-bounce rounded-full bg-cyan-400"
-            style={{ animationDelay: '0s' }}
-          />
-          <div
-            className="h-3 w-3 animate-bounce rounded-full bg-purple-400"
-            style={{ animationDelay: '0.2s' }}
-          />
-          <div
-            className="h-3 w-3 animate-bounce rounded-full bg-pink-400"
-            style={{ animationDelay: '0.4s' }}
-          />
-        </div>
+        {/* Cancel Button */}
+        <button
+          onClick={handleCancel}
+          className="mt-6 cursor-pointer border-2 border-pink-400 bg-transparent px-8 py-3 text-pink-400 transition-all hover:bg-pink-400 hover:text-white"
+          style={{ fontFamily: 'Orbitron' }}
+        >
+          CANCEL
+        </button>
       </div>
     </div>
   );
