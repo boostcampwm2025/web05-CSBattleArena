@@ -7,10 +7,6 @@ type ProfileSectionProps = {
 };
 
 export function ProfileSection({ profile, rank, level }: ProfileSectionProps) {
-  // 백엔드: expForCurrentLevel = 현재 레벨에서 모은 exp (0~99)
-  //         expForNextLevel = 남은 exp
-  // 프론트: 100 exp마다 레벨업이므로 총 100으로 계산
-  const expPercentage = level.expForCurrentLevel;
   const memberSince = new Date(profile.createdAt).toLocaleDateString('en-US', {
     year: 'numeric',
     month: '2-digit',
@@ -64,19 +60,21 @@ export function ProfileSection({ profile, rank, level }: ProfileSectionProps) {
           style={{ fontFamily: 'Orbitron' }}
         >
           <span className="font-bold">EXP TO NEXT LEVEL</span>
-          <span>{level.expForCurrentLevel} / 100</span>
+          <span>
+            {level.remainedExpPoint} / {level.needExpPoint}
+          </span>
         </div>
 
         <div className="relative h-4 w-full overflow-hidden border border-cyan-500 bg-slate-700">
           <div
             className="h-full bg-gradient-to-r from-cyan-400 to-purple-500 transition-all duration-500"
-            style={{ width: `${expPercentage}%` }}
+            style={{ width: `${Math.round((level.remainedExpPoint / level.needExpPoint) * 100)}%` }}
           />
           <div
             className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white"
             style={{ fontFamily: 'Orbitron' }}
           >
-            {Math.round(expPercentage)}%
+            {Math.round((level.remainedExpPoint / level.needExpPoint) * 100)}%
           </div>
         </div>
       </div>

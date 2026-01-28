@@ -5,7 +5,7 @@ import { UserStatistics } from '../user/entity/user-statistics.entity';
 import { UserProblemBank } from '../problem-bank/entity/user-problem-bank.entity';
 import { Tier } from '../tier/entity/tier.entity';
 import { MatchType } from './dto/leaderboard-query.dto';
-import { calculateLevel } from '../common/utils/level.util';
+import { calcLevel } from '../common/utils/level.util';
 import {
   MultiLeaderboardResponseDto,
   MultiMyRankingDto,
@@ -222,7 +222,7 @@ export class LeaderboardService {
       nickname: item.nickname,
       userProfile: item.userProfile,
       expPoint: Number(item.expPoint),
-      level: calculateLevel(Number(item.expPoint)).level,
+      level: calcLevel(Number(item.expPoint)).level,
       solvedCount: Number(item.solvedCount),
       correctCount: Number(item.correctCount),
     }));
@@ -321,7 +321,7 @@ export class LeaderboardService {
       nickname: myStats.nickname,
       userProfile: myStats.userProfile,
       expPoint,
-      level: calculateLevel(expPoint).level,
+      level: calcLevel(expPoint).level,
       solvedCount,
       correctCount,
     };

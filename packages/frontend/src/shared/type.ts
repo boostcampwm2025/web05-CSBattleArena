@@ -70,8 +70,8 @@ export type UserRank = {
 
 export type UserLevel = {
   level: number;
-  expForCurrentLevel: number;
-  expForNextLevel: number;
+  needExpPoint: number;
+  remainedExpPoint: number;
 };
 
 export type MatchStats = {
@@ -93,7 +93,7 @@ export type ProblemStats = {
 export type MyPageResponse = {
   profile: UserProfile;
   rank: UserRank;
-  level: UserLevel;
+  levelInfo: UserLevel;
   matchStats: MatchStats;
   problemStats: ProblemStats;
 };
