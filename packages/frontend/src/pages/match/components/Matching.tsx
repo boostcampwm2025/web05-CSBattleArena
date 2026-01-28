@@ -128,7 +128,10 @@ export default function Matching() {
             <div className="text-xs text-cyan-300" style={{ fontFamily: 'Orbitron' }}>
               대기 시간
             </div>
-            <div className="text-3xl font-bold text-pink-400" style={{ fontFamily: 'Orbitron' }}>
+            <div
+              className="min-w-[5ch] text-3xl font-bold text-pink-400"
+              style={{ fontFamily: 'Orbitron' }}
+            >
               {formatTime(time)}
             </div>
           </div>
