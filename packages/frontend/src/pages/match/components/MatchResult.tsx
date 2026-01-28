@@ -255,7 +255,10 @@ export default function MatchResult() {
                     <div className="font-bold text-cyan-300" style={{ fontFamily: 'Orbitron' }}>
                       You:
                     </div>
-                    <div className="text-white" style={{ fontFamily: 'Orbitron' }}>
+                    <div
+                      className="whitespace-pre-wrap text-white"
+                      style={{ fontFamily: 'Orbitron' }}
+                    >
                       {result.myAnswer}
                     </div>
                   </div>
@@ -265,20 +268,29 @@ export default function MatchResult() {
                     <div className="font-bold text-pink-300" style={{ fontFamily: 'Orbitron' }}>
                       Opponent:
                     </div>
-                    <div className="text-white" style={{ fontFamily: 'Orbitron' }}>
+                    <div
+                      className="whitespace-pre-wrap text-white"
+                      style={{ fontFamily: 'Orbitron' }}
+                    >
                       {result.opponentAnswer}
                     </div>
                   </div>
                 </div>
 
                 {/* Best Answer */}
-                <div className="gap-1 border border-amber-400 bg-amber-500/20 p-2">
+                <div className="flex flex-col gap-1 border border-amber-400 bg-amber-500/20 p-2">
                   <span
                     className="text-xs font-bold text-amber-400"
                     style={{ fontFamily: 'Orbitron' }}
                   >
                     <i className="ri-lightbulb-line mr-1" />
-                    Answer: {result.bestAnswer}
+                    Answer
+                  </span>
+                  <span
+                    className="whitespace-pre-wrap text-xs text-white"
+                    style={{ fontFamily: 'Orbitron' }}
+                  >
+                    {result.bestAnswer}
                   </span>
                 </div>
 
@@ -292,7 +304,10 @@ export default function MatchResult() {
                       <i className="ri-robot-2-line mr-1" />
                       AI Feedback
                     </span>
-                    <span className="text-xs text-white" style={{ fontFamily: 'Orbitron' }}>
+                    <span
+                      className="whitespace-pre-wrap text-xs text-white"
+                      style={{ fontFamily: 'Orbitron' }}
+                    >
                       {result.explanation}
                     </span>
                   </div>
