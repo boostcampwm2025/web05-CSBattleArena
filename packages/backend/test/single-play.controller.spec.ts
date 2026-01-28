@@ -117,6 +117,7 @@ describe('SinglePlayController', () => {
 
     it('정답 제출을 정상적으로 처리해야 함', async () => {
       const submitDto: SubmitAnswerDto = {
+        matchId: 123,
         questionId: 1,
         answer: 'React',
       };
@@ -138,11 +139,12 @@ describe('SinglePlayController', () => {
       const result = await controller.submitAnswer(mockUser, submitDto);
 
       expect(result).toEqual(mockResult);
-      expect(mockSinglePlayService.submitAnswer).toHaveBeenCalledWith('user-123', 1, 'React');
+      expect(mockSinglePlayService.submitAnswer).toHaveBeenCalledWith('user-123', 123, 1, 'React');
     });
 
     it('오답 제출도 정상적으로 처리해야 함', async () => {
       const submitDto: SubmitAnswerDto = {
+        matchId: 456,
         questionId: 2,
         answer: 'Wrong answer',
       };
@@ -166,6 +168,7 @@ describe('SinglePlayController', () => {
       expect(result).toEqual(mockResult);
       expect(mockSinglePlayService.submitAnswer).toHaveBeenCalledWith(
         'user-123',
+        456,
         2,
         'Wrong answer',
       );
@@ -173,6 +176,7 @@ describe('SinglePlayController', () => {
 
     it('Service 계층의 에러를 그대로 전파해야 함', async () => {
       const submitDto: SubmitAnswerDto = {
+        matchId: 789,
         questionId: 999,
         answer: 'Answer',
       };

@@ -28,6 +28,10 @@ describe('SinglePlayService', () => {
   };
 
   const mockDataSource = {
+    manager: {
+      save: jest.fn().mockResolvedValue({ id: 1 }),
+      findOne: jest.fn().mockResolvedValue({ id: 123 }),
+    },
     transaction: jest.fn(async (callback) => {
       const mockManager = {
         save: jest.fn().mockResolvedValue({ id: 1 }),
@@ -67,6 +71,39 @@ describe('SinglePlayService', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('startSession', () => {
+    it('싱글플레이 세션을 시작하고 matchId를 반환해야 함', async () => {
+      const userId = '1';
+      const mockMatch = { id: 123, player1Id: 1, player2Id: null, matchType: 'single' };
+
+      mockDataSource.manager.save.mockResolvedValue(mockMatch);
+
+      const result = await service.startSession(userId);
+
+      expect(result).toBe(123);
+      expect(mockDataSource.manager.save).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          player1Id: 1,
+          player2Id: null,
+          winnerId: null,
+          matchType: 'single',
+        }),
+      );
+    });
+
+    it('데이터베이스 에러 발생 시 InternalServerErrorException을 던져야 함', async () => {
+      const userId = '1';
+
+      mockDataSource.manager.save.mockRejectedValue(new Error('DB connection failed'));
+
+      await expect(service.startSession(userId)).rejects.toThrow(InternalServerErrorException);
+      await expect(service.startSession(userId)).rejects.toThrow(
+        '세션 시작 중 오류가 발생했습니다.',
+      );
+    });
   });
 
   describe('getCategories', () => {
@@ -174,27 +211,71 @@ describe('SinglePlayService', () => {
       mockQuizService.gradeQuestion.mockResolvedValue(mockGradeResult);
       mockQuizService.determineAnswerStatus.mockReturnValue('correct');
 
-      const result = await service.submitAnswer(userId, questionId, answer);
+      const matchId = 123;
+      mockDataSource.manager.findOne.mockResolvedValue({ id: matchId });
+      mockDataSource.manager.save.mockResolvedValue({});
+
+      const result = await service.submitAnswer(userId, matchId, questionId, answer);
 
       expect(result).toEqual({
         score: 10,
         grade: { submittedAnswer: 'React', isCorrect: true, aiFeedback: 'Perfect!' },
       });
-      expect(mockDataSource.transaction).toHaveBeenCalled();
+      expect(mockDataSource.manager.findOne).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ where: { id: matchId } }),
+      );
+      expect(mockDataSource.manager.save).toHaveBeenCalled();
     });
 
     it('존재하지 않는 문제 ID면 NotFoundException을 던져야 함', async () => {
       const userId = 'user1';
+      const matchId = 123;
       const questionId = 999;
       const answer = 'Answer';
 
       mockQuestionRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.submitAnswer(userId, questionId, answer)).rejects.toThrow(
+      await expect(service.submitAnswer(userId, matchId, questionId, answer)).rejects.toThrow(
         NotFoundException,
       );
-      await expect(service.submitAnswer(userId, questionId, answer)).rejects.toThrow(
+      await expect(service.submitAnswer(userId, matchId, questionId, answer)).rejects.toThrow(
         '존재하지 않는 문제입니다.',
+      );
+    });
+
+    it('존재하지 않는 matchId면 NotFoundException을 던져야 함', async () => {
+      const userId = 'user1';
+      const matchId = 999;
+      const questionId = 1;
+      const answer = 'Answer';
+      const mockQuestion = {
+        id: 1,
+        questionType: 'short',
+        content: 'What is React?',
+        difficulty: 1,
+        correctAnswer: 'React',
+      } as QuestionEntity;
+
+      const mockGradeResult = [
+        {
+          playerId: 'single-player',
+          answer: 'Answer',
+          isCorrect: true,
+          score: 10,
+          feedback: 'Good!',
+        },
+      ];
+
+      mockQuestionRepository.findOne.mockResolvedValue(mockQuestion);
+      mockQuizService.gradeQuestion.mockResolvedValue(mockGradeResult);
+      mockDataSource.manager.findOne.mockResolvedValue(null);
+
+      await expect(service.submitAnswer(userId, matchId, questionId, answer)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.submitAnswer(userId, matchId, questionId, answer)).rejects.toThrow(
+        '존재하지 않는 세션입니다.',
       );
     });
   });
