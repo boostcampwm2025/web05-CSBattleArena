@@ -78,13 +78,20 @@ export class EloMatchQueue implements IMatchQueue {
     let bestMatch: QueuedPlayer | null = null;
     let smallestEloDiff = Infinity;
 
+    const playerWaitTime = now - player.queuedAt;
+    const playerAllowedRange = this.getEloRangeForWaitTime(playerWaitTime);
+
     for (const candidate of this.queue) {
-      const waitTime = now - candidate.queuedAt;
-      const allowedRange = this.getEloRangeForWaitTime(waitTime);
+      const candidateWaitTime = now - candidate.queuedAt;
+      const candidateAllowedRange = this.getEloRangeForWaitTime(candidateWaitTime);
       const eloDiff = Math.abs(player.eloRating - candidate.eloRating);
 
-      // 범위 내에 있고, ELO 차이가 가장 작은 상대 선택
-      if (eloDiff <= allowedRange && eloDiff < smallestEloDiff) {
+      // 두 플레이어 모두의 허용 범위를 확인
+      if (
+        eloDiff <= playerAllowedRange &&
+        eloDiff <= candidateAllowedRange &&
+        eloDiff < smallestEloDiff
+      ) {
         bestMatch = candidate;
         smallestEloDiff = eloDiff;
       }
