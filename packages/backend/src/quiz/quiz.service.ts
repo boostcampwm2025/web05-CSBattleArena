@@ -525,10 +525,12 @@ export class QuizService {
     // 프롬프트 인젝션 방어: 사용자 답안 살균
     const { sanitized: sanitizedSubmissions, flaggedPlayers } = sanitizeSubmissions(submissions);
 
-    // 의심스러운 입력 로깅 (모니터링용)
-    if (flaggedPlayers.length > 0) {
-      this.logger.warn(`프롬프트 인젝션 의심 감지: ${JSON.stringify(flaggedPlayers)}`);
-    }
+    // 의심스러운 입력 로깅 (모니터링용, 유저별 개별 로깅으로 검색/취합 용이)
+    flaggedPlayers.forEach((p) => {
+      p.flags.forEach((f) => {
+        this.logger.warn(`프롬프트 인젝션 의심 감지. User ID: ${p.playerId} Flag: ${f}`);
+      });
+    });
 
     // 구조화된 프롬프트 형식 사용 (Spotlighting 기법)
     // 사용자 답안을 명확히 "데이터"로 분리하여 인젝션 방지
