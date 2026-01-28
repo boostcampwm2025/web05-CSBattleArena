@@ -61,45 +61,17 @@ export function MatchProvider({ children }: { children: React.ReactNode }) {
 
   const socketRef = useRef(getSocket(accessToken));
 
-  const handleUserInfo = useCallback(
-    (payload: {
-      nickname: string | undefined;
-      tier: string;
-      tierPoint: number;
-      exp_point: number;
-    }) => {
-      setUserData((prev) => {
-        if (!prev) {
-          return {
-            userId: '',
-            nickname: payload.nickname ?? '',
-            tier: payload.tier,
-            tierPoint: payload.tierPoint,
-            expPoint: payload.exp_point,
-            isSentFeedback: false,
-          };
-        }
+  const handleConnectCompleted = useCallback(() => {
+    const socket = socketRef.current;
 
-        return {
-          ...prev,
-          tier: payload.tier,
-          tierPoint: payload.tierPoint,
-          expPoint: payload.exp_point,
-        };
-      });
+    socket.emit('match:enqueue', undefined, (ack: MatchEnqueueRes) => {
+      if (!ack.ok) {
+        // TODO: 소켓 연결 실패 시 메인 화면으로 돌아가거나 자동 재연결 등 에러 헨들링 로직 추가
 
-      const socket = socketRef.current;
-
-      socket.emit('match:enqueue', undefined, (ack: MatchEnqueueRes) => {
-        if (!ack.ok) {
-          // TODO: 소켓 연결 실패 시 메인 화면으로 돌아가거나 자동 재연결 등 에러 헨들링 로직 추가
-
-          return;
-        }
-      });
-    },
-    [setUserData],
-  );
+        return;
+      }
+    });
+  }, [setUserData]);
 
   const handleMatchFound = useCallback((payload: MatchFound) => {
     setOpponentInfo(payload.opponent);
@@ -142,7 +114,7 @@ export function MatchProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const socket = socketRef.current;
 
-    socket.on('user:info', handleUserInfo);
+    socket.on('connect:completed', handleConnectCompleted);
     socket.on('match:found', handleMatchFound);
     socket.on('match:end', handleMatchEnd);
 
@@ -151,13 +123,13 @@ export function MatchProvider({ children }: { children: React.ReactNode }) {
     }
 
     return () => {
-      socket.off('user:info', handleUserInfo);
+      socket.off('connect:completed', handleConnectCompleted);
       socket.off('match:found', handleMatchFound);
       socket.off('match:end', handleMatchEnd);
 
       socket.disconnect();
     };
-  }, [handleUserInfo, handleMatchFound, handleMatchEnd]);
+  }, [handleConnectCompleted, handleMatchFound, handleMatchEnd]);
 
   return (
     <MatchCtx.Provider

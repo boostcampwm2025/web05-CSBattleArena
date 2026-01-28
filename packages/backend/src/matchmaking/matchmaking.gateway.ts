@@ -71,7 +71,7 @@ export class MatchmakingGateway implements OnGatewayConnection, OnGatewayDisconn
 
     this.sessionManager.registerUser(client.id, authUser.id);
 
-    client.emit('user:info', userInfo);
+    client.emit('connect:completed');
   }
 
   @SubscribeMessage('match:enqueue')
