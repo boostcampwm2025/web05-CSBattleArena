@@ -15,18 +15,26 @@ type QuestionAPI = {
   curQuestion: Question | null;
   setCurQuestion: React.Dispatch<React.SetStateAction<Question | null>>;
 };
+type MatchAPI = {
+  matchId: number | null;
+  setMatchId: React.Dispatch<React.SetStateAction<number | null>>;
+};
 
 const CategoryCtx = createContext<CategoryAPI | null>(null);
 const PhaseCtx = createContext<PhaseAPI | null>(null);
 const QuestionCtx = createContext<QuestionAPI | null>(null);
+const MatchCtx = createContext<MatchAPI | null>(null);
 
 export function SinglePlayProvider({ children }: { children: React.ReactNode }) {
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
   const [phase, setPhase] = useState<SinglePlayPhase>({ kind: 'preparing' });
+  const [matchId, setMatchId] = useState<number | null>(null);
 
   return (
     <CategoryCtx.Provider value={{ selectedCategoryIds, setSelectedCategoryIds }}>
-      <PhaseCtx.Provider value={{ phase, setPhase }}>{children}</PhaseCtx.Provider>
+      <PhaseCtx.Provider value={{ phase, setPhase }}>
+        <MatchCtx.Provider value={{ matchId, setMatchId }}>{children}</MatchCtx.Provider>
+      </PhaseCtx.Provider>
     </CategoryCtx.Provider>
   );
 }
@@ -64,6 +72,16 @@ export function useQuestion() {
 
   if (!ctx) {
     throw new Error();
+  }
+
+  return ctx;
+}
+
+export function useMatchId() {
+  const ctx = useContext(MatchCtx);
+
+  if (!ctx) {
+    throw new Error('useMatchId must be used within SinglePlayProvider');
   }
 
   return ctx;
