@@ -466,8 +466,11 @@ export class QuizService {
    * 객관식 채점 (내부 메서드)
    */
   private gradeMultipleChoice(question: QuestionEntity, submissions: Submission[]): GradeResult[] {
-    const content = question.content as { question: string; options: MultipleChoiceOptions };
-    const options = content?.options;
+    const parsedContent =
+      typeof question.content === 'string'
+        ? (JSON.parse(question.content) as { question: string; options: MultipleChoiceOptions })
+        : (question.content as { question: string; options: MultipleChoiceOptions });
+    const options = parsedContent?.options;
 
     return submissions.map((sub) => {
       const sanitizedAnswer = sub.answer.trim().toUpperCase() as keyof MultipleChoiceOptions;
