@@ -28,7 +28,7 @@ export function useProblemBank() {
 
   const [filters, setFilters] = useState<Partial<ProblemBankFilters>>({
     page: 1,
-    limit: 10,
+    limit: 9,
     categoryIds: [],
     search: '',
   });

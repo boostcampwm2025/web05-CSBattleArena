@@ -11,7 +11,6 @@ export default function ProblemBank() {
     categories,
     totalPages,
     currentPage,
-    isLoading,
     error,
     filters,
     // UI States
@@ -85,7 +84,7 @@ export default function ProblemBank() {
   };
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Retro grid background */}
       <div className="absolute inset-0 opacity-20">
         <div
@@ -100,50 +99,51 @@ export default function ProblemBank() {
         />
       </div>
 
-      <div className="relative z-10 h-full w-full overflow-y-auto">
-        <div className="mx-auto max-w-[1400px] p-4">
-          {/* Header */}
-          <div className="mb-3 flex items-center justify-between rounded border-2 border-cyan-400 bg-slate-900/90 px-4 py-2 backdrop-blur-sm">
-            <button
-              onClick={() => setScene('home')}
-              className="flex items-center gap-1 text-sm text-cyan-400 transition-colors hover:text-cyan-300"
-              style={{ fontFamily: 'Orbitron' }}
-            >
-              <i className="ri-arrow-left-line" />
-              <span>BACK</span>
-            </button>
+      {/* Header */}
+      <div className="relative z-10 flex items-center justify-between border-b-4 border-cyan-400 bg-gradient-to-r from-slate-800/95 to-slate-900/95 p-4">
+        <div className="flex items-center justify-center">
+          <button
+            onClick={() => setScene('home')}
+            className="border-2 border-slate-400 bg-gradient-to-r from-slate-600 to-slate-700 px-4 py-2 font-bold text-white transition-all duration-200 hover:scale-105 hover:from-slate-500 hover:to-slate-600"
+            style={{ fontFamily: 'Orbitron' }}
+          >
+            <i className="ri-arrow-left-line mr-2" />
+            BACK
+          </button>
+          <h1
+            className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text px-4 py-2 text-3xl font-black text-transparent"
+            style={{ fontFamily: 'Orbitron' }}
+          >
+            <i className="ri-database-2-line mr-3" />
+            PROBLEM BANK
+          </h1>
+        </div>
 
-            <h1
-              className="flex items-center gap-2 text-lg font-bold text-cyan-400"
+        <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search problems..."
+              value={searchInput}
+              onChange={handleSearchInputChange}
+              className="w-64 rounded border-2 border-cyan-400 bg-slate-900/90 px-4 py-2 text-sm text-cyan-400 placeholder-cyan-400/50 focus:outline-none focus:ring-2 focus:ring-cyan-400/50"
               style={{ fontFamily: 'Orbitron' }}
-            >
-              <span>💾</span>
-              <span>MY PROBLEM BANK</span>
-            </h1>
-
-            <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search problems..."
-                  value={searchInput}
-                  onChange={handleSearchInputChange}
-                  className="w-48 rounded border border-cyan-400 bg-slate-900/90 px-3 py-1 text-sm text-cyan-400 placeholder-cyan-400/50 focus:outline-none focus:ring-1 focus:ring-cyan-400"
-                  style={{ fontFamily: 'Orbitron' }}
-                />
-              </div>
-              <button
-                type="submit"
-                className="rounded border border-cyan-400 bg-cyan-400/20 px-3 py-1 text-xs text-cyan-400 transition-colors hover:bg-cyan-400/40"
-                style={{ fontFamily: 'Orbitron' }}
-              >
-                SEARCH
-              </button>
-            </form>
+            />
           </div>
+          <button
+            type="submit"
+            className="border-2 border-cyan-400 bg-cyan-400/20 px-4 py-2 text-sm font-bold text-cyan-400 transition-all duration-200 hover:bg-cyan-400/40"
+            style={{ fontFamily: 'Orbitron' }}
+          >
+            SEARCH
+          </button>
+        </form>
+      </div>
 
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="mx-auto flex h-full w-full max-w-[1400px] flex-col overflow-hidden p-4">
           {/* Filter Section */}
-          <div className="mb-3 space-y-3 rounded border-2 border-purple-400 bg-slate-900/90 p-3 backdrop-blur-sm">
+          <div className="mb-4 space-y-4 rounded border-2 border-purple-400 bg-slate-900/90 p-4 backdrop-blur-sm">
             {/* Category Row */}
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm text-cyan-400" style={{ fontFamily: 'Orbitron' }}>
@@ -307,8 +307,8 @@ export default function ProblemBank() {
 
           {/* Statistics Cards */}
           {statistics && (
-            <div className="mb-3 grid grid-cols-4 gap-3">
-              <div className="rounded border-2 border-cyan-400 bg-slate-900/90 p-3 backdrop-blur-sm">
+            <div className="mb-4 grid grid-cols-4 gap-4">
+              <div className="rounded border-2 border-cyan-400 bg-slate-900/90 p-4 backdrop-blur-sm">
                 <div className="text-xs text-cyan-400" style={{ fontFamily: 'Orbitron' }}>
                   TOTAL SOLVED
                 </div>
@@ -320,7 +320,7 @@ export default function ProblemBank() {
                 </div>
               </div>
 
-              <div className="rounded border-2 border-green-400 bg-slate-900/90 p-3 backdrop-blur-sm">
+              <div className="rounded border-2 border-green-400 bg-slate-900/90 p-4 backdrop-blur-sm">
                 <div className="text-xs text-green-400" style={{ fontFamily: 'Orbitron' }}>
                   CORRECT
                 </div>
@@ -332,7 +332,7 @@ export default function ProblemBank() {
                 </div>
               </div>
 
-              <div className="rounded border-2 border-pink-400 bg-slate-900/90 p-3 backdrop-blur-sm">
+              <div className="rounded border-2 border-pink-400 bg-slate-900/90 p-4 backdrop-blur-sm">
                 <div className="text-xs text-pink-400" style={{ fontFamily: 'Orbitron' }}>
                   INCORRECT
                 </div>
@@ -344,7 +344,7 @@ export default function ProblemBank() {
                 </div>
               </div>
 
-              <div className="rounded border-2 border-yellow-400 bg-slate-900/90 p-3 backdrop-blur-sm">
+              <div className="rounded border-2 border-yellow-400 bg-slate-900/90 p-4 backdrop-blur-sm">
                 <div className="text-xs text-yellow-400" style={{ fontFamily: 'Orbitron' }}>
                   PARTIAL
                 </div>
@@ -365,38 +365,31 @@ export default function ProblemBank() {
             </div>
           )}
 
-          {/* Loading State */}
-          {isLoading && (
-            <div className="mb-3 rounded border-2 border-cyan-400 bg-slate-900/90 p-4 text-center text-cyan-400 backdrop-blur-sm">
-              Loading...
-            </div>
-          )}
-
           {/* Problem Table */}
-          {!isLoading && !error && (
-            <div className="rounded border-2 border-cyan-400 bg-slate-900/90 backdrop-blur-sm">
+          {!error && (
+            <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded border-2 border-cyan-400 bg-slate-900/90 backdrop-blur-sm">
               {/* Table Header */}
               <div
-                className="grid grid-cols-[auto_1fr_auto_auto_auto_auto] gap-4 border-b border-cyan-400/30 px-4 py-2 text-xs text-cyan-400"
+                className="grid shrink-0 grid-cols-[auto_1fr_auto_auto_auto_auto] gap-4 border-b border-cyan-400/30 px-6 py-2 text-xs text-cyan-400"
                 style={{ fontFamily: 'Orbitron' }}
               >
                 <div className="w-8">STAT</div>
                 <div className="min-w-0">TITLE</div>
                 <div className="w-48">TAGS</div>
                 <div className="w-20">LEVEL</div>
-                <div className="w-32">SOLVED AT</div>
+                <div className="w-44">SOLVED AT</div>
                 <div className="w-8 text-right">MARK</div>
               </div>
 
               {/* Table Body */}
-              <div className="divide-y divide-cyan-400/10">
+              <div className="scrollbar-hide flex-1 divide-y divide-cyan-400/10 overflow-y-auto">
                 {items.length === 0 ? (
                   <div className="p-8 text-center text-gray-400">No problems found</div>
                 ) : (
                   items.map((problem) => (
                     <div
                       key={problem.id}
-                      className="grid grid-cols-[auto_1fr_auto_auto_auto_auto] gap-4 px-4 py-3 transition-colors hover:bg-purple-900/20"
+                      className="grid grid-cols-[auto_1fr_auto_auto_auto_auto] gap-4 px-6 py-3 transition-colors hover:bg-purple-900/20"
                     >
                       {/* Result */}
                       <div className="flex w-8 items-center justify-center">
@@ -453,14 +446,17 @@ export default function ProblemBank() {
 
                       {/* Solved At */}
                       <div
-                        className="flex w-32 items-center text-xs text-gray-400"
+                        className="flex w-44 items-center whitespace-nowrap text-xs text-gray-400"
                         style={{ fontFamily: 'Orbitron' }}
                       >
                         {new Date(problem.solvedAt).toLocaleString('ko-KR', {
+                          timeZone: 'Asia/Seoul',
+                          year: 'numeric',
                           month: '2-digit',
                           day: '2-digit',
                           hour: '2-digit',
                           minute: '2-digit',
+                          hour12: false,
                         })}
                       </div>
 
@@ -486,8 +482,8 @@ export default function ProblemBank() {
           )}
 
           {/* Pagination */}
-          {!isLoading && !error && totalPages > 0 && (
-            <div className="mt-3 flex items-center justify-center gap-2">
+          {!error && totalPages > 0 && (
+            <div className="mt-6 flex shrink-0 items-center justify-center gap-2">
               {/* Previous Button */}
               <button
                 onClick={() => goToPage(currentPage - 1)}
