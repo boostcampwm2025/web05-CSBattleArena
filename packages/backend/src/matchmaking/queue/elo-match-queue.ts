@@ -1,6 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { IMatchQueue, Match, QueuedPlayer } from '../interfaces/matchmaking.interface';
 import { randomUUID } from 'crypto';
+import { MATCH_RANGES, POLLING_INTERVAL_MS } from '../constants/matchmaking.constants';
 
 /**
  * ELO 기반 매칭 큐
@@ -11,16 +12,27 @@ import { randomUUID } from 'crypto';
  * - 30초+: ±500 ELO
  */
 @Injectable()
-export class EloMatchQueue implements IMatchQueue {
+export class EloMatchQueue implements IMatchQueue, OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(EloMatchQueue.name);
   private queue: QueuedPlayer[] = [];
+  private pollingInterval: NodeJS.Timeout | null = null;
 
-  // 매칭 범위 설정 (밀리초)
-  private readonly MATCH_RANGES = [
-    { maxWaitTime: 10000, eloRange: 100 }, // 0-10초: ±100 ELO
-    { maxWaitTime: 30000, eloRange: 200 }, // 10-30초: ±200 ELO
-    { maxWaitTime: Infinity, eloRange: 500 }, // 30초+: ±500 ELO
-  ];
+  onModuleInit() {
+    // 주기적으로 큐의 플레이어들끼리 재매칭 시도
+    this.pollingInterval = setInterval(() => {
+      this.attemptRematchExistingPlayers();
+    }, POLLING_INTERVAL_MS);
+
+    this.logger.log('EloMatchQueue polling started');
+  }
+
+  onModuleDestroy() {
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
+      this.logger.log('EloMatchQueue polling stopped');
+    }
+  }
 
   add(userId: string, eloRating: number): Match | null {
     // 중복 체크
@@ -106,13 +118,13 @@ export class EloMatchQueue implements IMatchQueue {
    * @returns 허용 ELO 범위
    */
   private getEloRangeForWaitTime(waitTime: number): number {
-    for (const range of this.MATCH_RANGES) {
+    for (const range of MATCH_RANGES) {
       if (waitTime < range.maxWaitTime) {
         return range.eloRange;
       }
     }
 
-    return this.MATCH_RANGES[this.MATCH_RANGES.length - 1].eloRange;
+    return MATCH_RANGES[MATCH_RANGES.length - 1].eloRange;
   }
 
   /**
@@ -134,5 +146,92 @@ export class EloMatchQueue implements IMatchQueue {
    */
   getQueueStatus(): QueuedPlayer[] {
     return [...this.queue];
+  }
+
+  /**
+   * 큐에 있는 플레이어들끼리 재매칭 시도
+   * Polling으로 주기적으로 호출됨
+   */
+  private attemptRematchExistingPlayers(): Match[] {
+    const matches: Match[] = [];
+
+    if (this.queue.length < 2) {
+      return matches;
+    }
+
+    const now = Date.now();
+    const processedPlayers = new Set<string>();
+
+    // 큐를 순회하면서 각 플레이어에 대해 매칭 시도
+    for (let i = 0; i < this.queue.length; i++) {
+      const player = this.queue[i];
+
+      // 이미 처리된 플레이어는 스킵
+      if (processedPlayers.has(player.userId)) {
+        continue;
+      }
+
+      // 현재 플레이어에게 맞는 상대 찾기
+      const waitTime = now - player.queuedAt;
+      const allowedRange = this.getEloRangeForWaitTime(waitTime);
+
+      let bestMatch: QueuedPlayer | null = null;
+      let smallestEloDiff = Infinity;
+
+      for (let j = i + 1; j < this.queue.length; j++) {
+        const candidate = this.queue[j];
+
+        // 이미 처리된 플레이어는 스킵
+        if (processedPlayers.has(candidate.userId)) {
+          continue;
+        }
+
+        const candidateWaitTime = now - candidate.queuedAt;
+        const candidateAllowedRange = this.getEloRangeForWaitTime(candidateWaitTime);
+
+        const eloDiff = Math.abs(player.eloRating - candidate.eloRating);
+
+        // 두 플레이어 모두의 허용 범위를 확인
+        if (
+          eloDiff <= allowedRange &&
+          eloDiff <= candidateAllowedRange &&
+          eloDiff < smallestEloDiff
+        ) {
+          bestMatch = candidate;
+          smallestEloDiff = eloDiff;
+        }
+      }
+
+      // 매칭 성공
+      if (bestMatch) {
+        matches.push({
+          player1: player.userId,
+          player2: bestMatch.userId,
+          roomId: randomUUID(),
+        });
+
+        processedPlayers.add(player.userId);
+        processedPlayers.add(bestMatch.userId);
+
+        this.logger.log(
+          `Rematch found: ${player.userId} (${player.eloRating}) vs ${bestMatch.userId} (${bestMatch.eloRating})`,
+        );
+      }
+    }
+
+    // 매칭된 플레이어들을 큐에서 제거
+    for (const userId of processedPlayers) {
+      this.removeFromQueue(userId);
+    }
+
+    return matches;
+  }
+
+  /**
+   * Polling으로 발견된 매칭들을 가져옴
+   * GameGateway에서 호출하여 처리
+   */
+  getAndClearPendingMatches(): Match[] {
+    return this.attemptRematchExistingPlayers();
   }
 }
