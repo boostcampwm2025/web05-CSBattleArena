@@ -71,7 +71,7 @@ export function MatchProvider({ children }: { children: React.ReactNode }) {
         return;
       }
     });
-  }, [setUserData]);
+  }, []);
 
   const handleMatchFound = useCallback((payload: MatchFound) => {
     setOpponentInfo(payload.opponent);
