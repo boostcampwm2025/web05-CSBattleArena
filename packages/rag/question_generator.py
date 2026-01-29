@@ -14,69 +14,70 @@ from prompts import SYSTEM_PROMPT, build_generation_prompt
 from token_calculator import calculate_cost, TokenUsage
 
 
-# Structured Output을 위한 JSON 스키마
-QUESTION_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "questions": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "question_type": {
-                        "type": "string",
-                        "enum": ["multiple_choice", "short_answer", "essay"],
-                        "description": "문제 유형",
+def get_question_schema(target_count: int = 10) -> dict:
+    """문제 수에 맞는 JSON 스키마 생성"""
+    return {
+        "type": "object",
+        "properties": {
+            "questions": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "question_type": {
+                            "type": "string",
+                            "enum": ["multiple_choice", "short_answer", "essay"],
+                            "description": "문제 유형",
+                        },
+                        "difficulty": {
+                            "type": "integer",
+                            "enum": [1, 2, 3],
+                            "description": "난이도 (1=기초, 2=중급, 3=심화)",
+                        },
+                        "question": {
+                            "type": "string",
+                            "description": "질문 텍스트",
+                        },
+                        "answer": {
+                            "type": "string",
+                            "description": "정답 (단답형/서술형) 또는 객관식 정답 텍스트",
+                        },
+                        "explanation": {
+                            "type": "string",
+                            "description": "해설 (2-4문장으로 답변의 이유와 개념을 설명. 절대로 '청크', '문서', '출처' 등의 단어 사용 금지)",
+                        },
+                        "options": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "객관식 선택지 (4개, 객관식만 해당)",
+                        },
+                        "correct_index": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 3,
+                            "description": "정답 인덱스 (반드시 0-3 사이의 '정수' 하나여야 하며, [0]과 같은 배열/리스트 형태는 절대 금지)",
+                        },
+                        "chunk_ids": {
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "description": "참조한 청크 ID 목록",
+                        },
                     },
-                    "difficulty": {
-                        "type": "integer",
-                        "enum": [1, 2, 3],
-                        "description": "난이도 (1=기초, 2=중급, 3=심화)",
-                    },
-                    "question": {
-                        "type": "string",
-                        "description": "질문 텍스트",
-                    },
-                    "answer": {
-                        "type": "string",
-                        "description": "정답 (단답형/서술형) 또는 객관식 정답 텍스트",
-                    },
-                    "explanation": {
-                        "type": "string",
-                        "description": "해설 (2-4문장으로 답변의 이유와 개념을 설명. 절대로 '청크', '문서', '출처' 등의 단어 사용 금지)",
-                    },
-                    "options": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "객관식 선택지 (4개, 객관식만 해당)",
-                    },
-                    "correct_index": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 3,
-                        "description": "정답 인덱스 (반드시 0-3 사이의 '정수' 하나여야 하며, [0]과 같은 배열/리스트 형태는 절대 금지)",
-                    },
-                    "chunk_ids": {
-                        "type": "array",
-                        "items": {"type": "integer"},
-                        "description": "참조한 청크 ID 목록",
-                    },
+                    "required": [
+                        "question_type",
+                        "difficulty",
+                        "question",
+                        "answer",
+                        "explanation",
+                        "chunk_ids",
+                    ],
                 },
-                "required": [
-                    "question_type",
-                    "difficulty",
-                    "question",
-                    "answer",
-                    "explanation",
-                    "chunk_ids",
-                ],
-            },
-            "minItems": 5,
-            "maxItems": 10,
-        }
-    },
-    "required": ["questions"],
-}
+                "minItems": max(3, target_count - 2),
+                "maxItems": target_count + 2,
+            }
+        },
+        "required": ["questions"],
+    }
 
 
 def call_clova_structured(
@@ -180,19 +181,24 @@ def generate_questions(
     # 청크 데이터 준비 (ID, 내용 튜플)
     chunks_with_ids = list(zip(context.chunk_ids, context.chunks))
     valid_chunk_ids = set(context.chunk_ids)
+    target_count = context.target_question_count
 
     # 프롬프트 빌드
     user_prompt = build_generation_prompt(
         category_name=context.category_name,
         category_path=context.category_path,
         chunks=chunks_with_ids,
+        target_count=target_count,
     )
+
+    # 동적 스키마 생성
+    schema = get_question_schema(target_count)
 
     # HyperCLOVA X API 직접 호출
     response, usage = call_clova_structured(
         system_prompt=SYSTEM_PROMPT,
         user_prompt=user_prompt,
-        schema=QUESTION_SCHEMA,
+        schema=schema,
         temperature=config.TEMPERATURE,
     )
 

@@ -22,9 +22,9 @@ GENERATION_PROMPT = """
 
 ## 생성 요구사항
 
-### 1. 문제 수량 (필수: 정확히 10개)
-- **반드시 10개의 문제를 생성하세요.**
-- 어떤 경우에도 10개 미만으로 생성하지 마세요.
+### 1. 문제 수량 (필수: 정확히 {target_count}개)
+- **반드시 {target_count}개의 문제를 생성하세요.**
+- 어떤 경우에도 {target_count}개 미만으로 생성하지 마세요.
 - **수량 확보 전략**:
   1. **유형 변형**: 하나의 개념을 객관식, 단답형, 서술형으로 각각 만드세요.
      - 예: "TCP 3-way handshake" -> (1) 순서 묻기(객관식), (2) 단계별 패킷명 묻기(단답형), (3) 신뢰성 보장 원리 묻기(서술형)
@@ -79,13 +79,14 @@ GENERATION_PROMPT = """
 
 {essay_rules}
 
-** 다시 한번 강조합니다: 반드시 한국어로 정확히 10개의 문제를 생성하세요. **
+** 다시 한번 강조합니다: 반드시 한국어로 정확히 {target_count}개의 문제를 생성하세요. **
 """
 
 def build_generation_prompt(
     category_name: str,
     category_path: str,
     chunks: list[tuple[int, str]],  # [(chunk_id, chunk_content), ...]
+    target_count: int = 10,
 ) -> str:
     """문제 생성 프롬프트 빌드
 
@@ -93,6 +94,7 @@ def build_generation_prompt(
         category_name: 카테고리명
         category_path: 카테고리 경로 (예: "네트워크 > TCP/IP > 연결 관리")
         chunks: (청크 ID, 청크 내용) 튜플 리스트
+        target_count: 생성할 문제 수 (기본값 10)
 
     Returns:
         완성된 프롬프트 문자열
@@ -111,6 +113,7 @@ def build_generation_prompt(
         category_path=category_path,
         chunk_id_list=chunk_id_list,
         chunks=chunks_text,
+        target_count=target_count,
         multiple_choice_rules=MULTIPLE_CHOICE_PROMPT,
         short_answer_rules=SHORT_ANSWER_PROMPT,
         essay_rules=ESSAY_PROMPT,

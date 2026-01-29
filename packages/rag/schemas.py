@@ -100,6 +100,7 @@ class QuestionGenerationContext:
     category_path: str
     chunks: list[str]  # 청크 내용 목록
     chunk_ids: list[int]  # 청크 ID 목록
+    target_question_count: int = 10  # 생성할 문제 수 (기본값 10)
 
     def get_combined_context(self, separator: str = "\n\n---\n\n") -> str:
         """청크들을 하나의 컨텍스트로 합침"""
