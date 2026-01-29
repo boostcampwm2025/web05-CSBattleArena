@@ -7,7 +7,13 @@ import { getSocket } from '@/lib/socket';
 import { useUser } from '@/feature/auth/useUser';
 
 type MatchState = 'matching' | 'inGame' | 'match-end';
-type OpponentInfo = { nickname: string; tier: string; expPoint: number } | null;
+type OpponentInfo = {
+  nickname: string;
+  profileImage: string | null;
+  tier: string;
+  tierPoint: number;
+  expPoint: number;
+} | null;
 
 type QuestionContent =
   | { type: 'multiple'; question: string; option: string[] }
@@ -26,6 +32,7 @@ type RoundResult = {
   myAnswer: string;
   opponentAnswer: string;
   bestAnswer: string;
+  explanation: string;
 };
 
 type MatchResult = {
@@ -34,6 +41,8 @@ type MatchResult = {
   opponentTotalPoints: number;
   opponentWinCount: number;
   roundResults: RoundResult[];
+  myTierPointChange?: number;
+  isWin?: boolean;
 };
 
 type MatchAPI = {
@@ -60,28 +69,17 @@ export function MatchProvider({ children }: { children: React.ReactNode }) {
 
   const socketRef = useRef(getSocket(accessToken));
 
-  const handleUserInfo = useCallback(
-    (payload: { nickname: string | undefined; tier: string; exp_point: number }) => {
-      setUserData((prev) => {
-        if (!prev) {
-          return prev;
-        }
+  const handleConnectCompleted = useCallback(() => {
+    const socket = socketRef.current;
 
-        return { ...prev, tier: payload.tier, expPoint: payload.exp_point };
-      });
+    socket.emit('match:enqueue', undefined, (ack: MatchEnqueueRes) => {
+      if (!ack.ok) {
+        // TODO: 소켓 연결 실패 시 메인 화면으로 돌아가거나 자동 재연결 등 에러 헨들링 로직 추가
 
-      const socket = socketRef.current;
-
-      socket.emit('match:enqueue', undefined, (ack: MatchEnqueueRes) => {
-        if (!ack.ok) {
-          // TODO: 소켓 연결 실패 시 메인 화면으로 돌아가거나 자동 재연결 등 에러 헨들링 로직 추가
-
-          return;
-        }
-      });
-    },
-    [setUserData],
-  );
+        return;
+      }
+    });
+  }, []);
 
   const handleMatchFound = useCallback((payload: MatchFound) => {
     setOpponentInfo(payload.opponent);
@@ -95,21 +93,46 @@ export function MatchProvider({ children }: { children: React.ReactNode }) {
     setMatchState('inGame');
   }, []);
 
-  const handleMatchEnd = useCallback((payload: MatchEnd) => {
+  const handleOpponentDisconnected = useCallback(() => {
     setMatchResult((prev) => ({
       ...prev,
-      myTotalPoints: payload.finalScores.my,
-      opponentTotalPoints: payload.finalScores.opponent,
+      myWinCount: prev.myWinCount + 1,
     }));
-
-    setMatchState('match-end');
   }, []);
+
+  const handleMatchEnd = useCallback(
+    (payload: MatchEnd) => {
+      setMatchResult((prev) => ({
+        ...prev,
+        myTotalPoints: payload.finalScores.my,
+        opponentTotalPoints: payload.finalScores.opponent,
+        myTierPointChange: payload.tierPointChange,
+        isWin: payload.isWin, // 서버에서 받은 승패 여부 저장
+      }));
+
+      // 티어포인트 업데이트
+      setUserData((prev) => {
+        if (!prev) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          tierPoint: prev.tierPoint + payload.tierPointChange,
+        };
+      });
+
+      setMatchState('match-end');
+    },
+    [setUserData],
+  );
 
   useEffect(() => {
     const socket = socketRef.current;
 
-    socket.on('user:info', handleUserInfo);
+    socket.on('connect:completed', handleConnectCompleted);
     socket.on('match:found', handleMatchFound);
+    socket.on('opponent:disconnected', handleOpponentDisconnected);
     socket.on('match:end', handleMatchEnd);
 
     if (!socket.connected) {
@@ -117,13 +140,14 @@ export function MatchProvider({ children }: { children: React.ReactNode }) {
     }
 
     return () => {
-      socket.off('user:info', handleUserInfo);
+      socket.off('connect:completed', handleConnectCompleted);
       socket.off('match:found', handleMatchFound);
+      socket.off('opponent:disconnected', handleOpponentDisconnected);
       socket.off('match:end', handleMatchEnd);
 
       socket.disconnect();
     };
-  }, [handleUserInfo, handleMatchFound, handleMatchEnd]);
+  }, [handleConnectCompleted, handleMatchFound, handleOpponentDisconnected, handleMatchEnd]);
 
   return (
     <MatchCtx.Provider

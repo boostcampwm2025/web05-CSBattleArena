@@ -1,12 +1,9 @@
 import { Controller, Get, NotFoundException, Query, Req, Res, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { ConfigService } from '@nestjs/config';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { CurrentUser } from './decorators/current-user.decorator';
-import { AuthenticatedUser } from './strategies/jwt.strategy';
 import { GithubProfile } from './strategies/github.strategy';
 
 interface RequestWithGithubUser extends Request {
@@ -153,41 +150,5 @@ export class AuthController {
     res.clearCookie('refreshToken');
 
     return res.json({ message: 'Logged out successfully' });
-  }
-
-  @Get('me')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('access-token')
-  @ApiOperation({
-    summary: '내 프로필 조회',
-    description: '현재 로그인한 사용자의 프로필 정보를 조회합니다.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: '프로필 조회 성공',
-    schema: {
-      properties: {
-        id: { type: 'number', description: '사용자 ID' },
-        visibleId: { type: 'string', description: '외부에 노출되는 사용자 ID' },
-        nickname: { type: 'string', description: '사용자 닉네임' },
-        email: { type: 'string', description: '사용자 이메일' },
-        userProfile: { type: 'string', description: '사용자 프로필 정보' },
-        oauthProvider: { type: 'string', description: 'OAuth 제공자 (github 등)' },
-        tier: { type: 'string', description: '사용자 티어' },
-        expPoint: { type: 'number', description: '경험치' },
-        winCount: { type: 'number', description: '승리 횟수' },
-        loseCount: { type: 'number', description: '패배 횟수' },
-      },
-    },
-  })
-  @ApiResponse({ status: 401, description: '인증 실패' })
-  async getProfile(@CurrentUser() user: AuthenticatedUser) {
-    const profile = await this.authService.getUserProfile(user.id);
-
-    if (!profile) {
-      return { error: 'User not found' };
-    }
-
-    return profile;
   }
 }

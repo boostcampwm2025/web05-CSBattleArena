@@ -1,17 +1,30 @@
-export function login() {
+import { request } from '@/lib/api/request';
+
+type UserData = {
+  profile: { nickname: string; profileImage: string | null };
+  rank: { tier: string; tierPoint: number };
+  levelInfo: { level: number; needExpPoint: number; remainedExpPoint: number };
+};
+
+type OAuthUserData = {
+  userId: string;
+  nickname: string;
+  userProfile: string | null;
+  tier: string;
+  tierPoint: number;
+  level: number;
+  needExpPoint: number;
+  remainedExpPoint: number;
+  isSentFeedback: boolean;
+};
+
+function login() {
   window.location.replace(`/api/auth/github`);
 }
 
-export async function logout(signal: AbortSignal) {
+async function logout(signal: AbortSignal) {
   try {
-    const res = await fetch(`/api/auth/logout`, {
-      credentials: 'include',
-      signal,
-    });
-
-    if (!res.ok) {
-      throw new Error(`Failed to logout. status: ${res.status}, message: ${res.statusText}`);
-    }
+    await request('/api/auth/logout', undefined, { credentials: 'include', signal });
   } catch (e) {
     if (e instanceof DOMException && e.name === 'AbortError') {
       return;
@@ -21,7 +34,9 @@ export async function logout(signal: AbortSignal) {
   }
 }
 
-export function handleOAuthCallback() {
+function handleOAuthCallback():
+  | { ok: false; err: string }
+  | { ok: true; accessToken: string; userData: OAuthUserData } {
   const hash = window.location.hash;
 
   if (!hash || hash.length <= 1) {
@@ -42,24 +57,41 @@ export function handleOAuthCallback() {
     return { ok: false, err: 'There is no user data.' };
   }
 
-  window.history.replaceState(null, '', '/');
-
   return { ok: true, accessToken: token, userData: JSON.parse(decodeURIComponent(userRaw)) };
 }
 
-export async function refreshAccessToken(signal: AbortSignal) {
-  const res = await fetch(`/api/auth/refresh`, {
-    credentials: 'include',
-    signal,
-  });
+async function refreshAccessToken(signal: AbortSignal) {
+  try {
+    const data = await request<{ accessToken: string }>('/api/auth/refresh', undefined, {
+      credentials: 'include',
+      signal,
+    });
 
-  if (!res.ok) {
-    throw new Error(
-      `Failed to get refresh token. status: ${res.status}, message: ${res.statusText}`,
-    );
+    return data.accessToken;
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      return;
+    }
+
+    // TODO: 에러 모달 출력
   }
-
-  const data = (await res.json()) as { accessToken: string };
-
-  return data.accessToken;
 }
+
+async function fetchUserData(accessToken: string, signal: AbortSignal) {
+  try {
+    const data = await request<UserData>('/api/users/me', accessToken, {
+      credentials: 'include',
+      signal,
+    });
+
+    return data;
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      return;
+    }
+
+    // TODO: 에러 모달 출력
+  }
+}
+
+export { login, logout, handleOAuthCallback, refreshAccessToken, fetchUserData };

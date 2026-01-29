@@ -32,18 +32,24 @@ export class MatchPersistenceService {
 
   /**
    * 매치 종료 후 DB에 결과 저장 (Batch INSERT, 지수 백오프 재시도)
+   * @returns ELO 변화량 정보 { player1Change, player2Change }
    */
-  async saveMatchToDatabase(roomId: string, finalResult: FinalResult): Promise<void> {
+  async saveMatchToDatabase(
+    roomId: string,
+    finalResult: FinalResult,
+  ): Promise<{ player1Change: number; player2Change: number } | null> {
     const session = this.sessionManager.getGameSession(roomId);
 
     if (!session) {
       this.logger.error(`게임 세션을 찾을 수 없습니다: ${roomId}`);
 
-      return;
+      return null;
     }
 
     for (let attempt = 1; attempt <= this.MAX_RETRIES; attempt++) {
       try {
+        let eloChanges: { player1Change: number; player2Change: number } | null = null;
+
         await this.connection.transaction(async (manager) => {
           const matchId = await this.insertMatch(manager, session, finalResult);
           const roundIdMap = await this.insertRounds(manager, matchId, session);
@@ -52,11 +58,11 @@ export class MatchPersistenceService {
 
           // ELO 업데이트 (무승부가 아닐 때만)
           if (!finalResult.isDraw && finalResult.winnerId) {
-            await this.updateEloRatings(manager, session, finalResult);
+            eloChanges = await this.updateEloRatings(manager, matchId, session, finalResult);
           }
         });
 
-        return;
+        return eloChanges;
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         const errorStack = error instanceof Error ? error.stack : undefined;
@@ -67,7 +73,7 @@ export class MatchPersistenceService {
             JSON.stringify({ roomId, finalResult, error: errorMessage }),
           );
 
-          return;
+          return null;
         }
 
         const delay = this.calculateBackoff(attempt);
@@ -86,6 +92,8 @@ export class MatchPersistenceService {
         }
       }
     }
+
+    return null;
   }
 
   private calculateBackoff(attempt: number): number {
@@ -308,14 +316,17 @@ export class MatchPersistenceService {
    * ELO 레이팅 업데이트
    *
    * @param manager - 트랜잭션 매니저
+   * @param matchId - 매치 ID
    * @param session - 게임 세션
    * @param finalResult - 게임 결과
+   * @returns ELO 변화량 { player1Change, player2Change }
    */
   private async updateEloRatings(
     manager: EntityManager,
+    matchId: number,
     session: GameSession,
     finalResult: FinalResult,
-  ): Promise<void> {
+  ): Promise<{ player1Change: number; player2Change: number }> {
     const winnerId = this.parseUserId(finalResult.winnerId);
     const loserId =
       this.parseUserId(session.player1Id) === winnerId
@@ -381,8 +392,17 @@ export class MatchPersistenceService {
     );
 
     // 티어 변동 히스토리 기록
-    await this.recordTierHistory(manager, winnerId, winnerNewRating);
-    await this.recordTierHistory(manager, loserId, loserNewRating);
+    await this.recordTierHistory(manager, winnerId, matchId, winnerChange, winnerNewRating);
+    await this.recordTierHistory(manager, loserId, matchId, loserChange, loserNewRating);
+
+    // player1과 player2의 변화량 반환
+    const player1Id = this.parseUserId(session.player1Id);
+    const player2Id = this.parseUserId(session.player2Id);
+
+    return {
+      player1Change: player1Id === winnerId ? winnerChange : loserChange,
+      player2Change: player2Id === winnerId ? winnerChange : loserChange,
+    };
   }
 
   /**
@@ -390,11 +410,15 @@ export class MatchPersistenceService {
    *
    * @param manager - 트랜잭션 매니저
    * @param userId - 유저 ID
+   * @param matchId - 매치 ID
+   * @param tierChange - 티어 변화량
    * @param newElo - 새로운 ELO
    */
   private async recordTierHistory(
     manager: EntityManager,
     userId: number,
+    matchId: number,
+    tierChange: number,
     newElo: number,
   ): Promise<void> {
     const tierName = calculateTier(newElo);
@@ -413,6 +437,8 @@ export class MatchPersistenceService {
       userId,
       tierId: tier.id,
       tierPoint: newElo,
+      matchId,
+      tierChange,
     });
   }
 }

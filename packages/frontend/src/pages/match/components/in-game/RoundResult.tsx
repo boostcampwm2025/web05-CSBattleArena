@@ -1,13 +1,15 @@
 import { useUser } from '@/feature/auth/useUser';
 import { useMatch } from '@/feature/matching/useMatch';
 import { useRoundPhase, useRoundScore, useRoundTick } from '@/feature/matching/useRound';
+import ProfileAvatar from '@/shared/ProfileAvatar';
 
 export default function RoundResult() {
   const { userData } = useUser();
   const { opponentInfo } = useMatch();
   const { roundIndex } = useRoundPhase();
   const { remainedSec } = useRoundTick();
-  const { myAnswer, myIsCorrect, opponentAnswer, opponentIsCorrect, bestAnswer } = useRoundScore();
+  const { myAnswer, myIsCorrect, opponentAnswer, opponentIsCorrect, bestAnswer, explanation } =
+    useRoundScore();
 
   return (
     <div className="flex h-full items-center justify-center">
@@ -28,9 +30,12 @@ export default function RoundResult() {
           {/* Player Answer */}
           <div className="flex flex-col gap-4 border-4 border-cyan-400 bg-gradient-to-r from-slate-800/95 to-slate-900/95 p-5 shadow-2xl shadow-cyan-500/30">
             <div className="mb-4 flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg border-2 border-white bg-gradient-to-br from-cyan-400 to-purple-500">
-                <i className="ri-user-star-line text-2xl text-white" />
-              </div>
+              <ProfileAvatar
+                profileImage={userData?.profileImage}
+                nickname={userData?.nickname}
+                size="sm"
+                borderStyle="white"
+              />
               <div className="text-lg font-bold text-cyan-300" style={{ fontFamily: 'Orbitron' }}>
                 {userData?.nickname}
               </div>
@@ -39,7 +44,10 @@ export default function RoundResult() {
               <div className="text-xs text-purple-300" style={{ fontFamily: 'Orbitron' }}>
                 YOUR ANSWER
               </div>
-              <div className="text-base text-white" style={{ fontFamily: 'Orbitron' }}>
+              <div
+                className="whitespace-pre-wrap text-base text-white"
+                style={{ fontFamily: 'Orbitron' }}
+              >
                 {myAnswer}
               </div>
             </div>
@@ -67,9 +75,12 @@ export default function RoundResult() {
           {/* Opponent Answer */}
           <div className="flex flex-col gap-4 border-4 border-pink-400 bg-gradient-to-r from-slate-800/95 to-slate-900/95 p-5 shadow-2xl shadow-pink-500/30">
             <div className="mb-4 flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg border-2 border-white bg-gradient-to-br from-pink-400 to-rose-500">
-                <i className="ri-user-star-line text-2xl text-white" />
-              </div>
+              <ProfileAvatar
+                profileImage={opponentInfo?.profileImage}
+                nickname={opponentInfo?.nickname}
+                size="sm"
+                borderStyle="white"
+              />
               <div className="text-lg font-bold text-pink-300" style={{ fontFamily: 'Orbitron' }}>
                 {opponentInfo?.nickname}
               </div>
@@ -78,7 +89,10 @@ export default function RoundResult() {
               <div className="mb-1 text-xs text-purple-300" style={{ fontFamily: 'Orbitron' }}>
                 OPPONENT ANSWER
               </div>
-              <div className="text-base text-white" style={{ fontFamily: 'Orbitron' }}>
+              <div
+                className="whitespace-pre-wrap text-base text-white"
+                style={{ fontFamily: 'Orbitron' }}
+              >
                 {opponentAnswer}
               </div>
             </div>
@@ -110,8 +124,25 @@ export default function RoundResult() {
             <i className="ri-lightbulb-line mr-2" />
             CORRECT ANSWER
           </div>
-          <div className="text-base text-white" style={{ fontFamily: 'Orbitron' }}>
+          <div
+            className="whitespace-pre-wrap text-base text-white"
+            style={{ fontFamily: 'Orbitron' }}
+          >
             {bestAnswer}
+          </div>
+        </div>
+
+        {/* AI Feedback */}
+        <div className="flex flex-col gap-2 border-4 border-purple-400 bg-gradient-to-r from-slate-800/95 to-slate-900/95 p-4 shadow-2xl shadow-purple-500/30">
+          <div className="text-sm font-bold text-purple-400" style={{ fontFamily: 'Orbitron' }}>
+            <i className="ri-robot-2-line mr-2" />
+            AI Feedback
+          </div>
+          <div
+            className="whitespace-pre-wrap text-base text-white"
+            style={{ fontFamily: 'Orbitron' }}
+          >
+            {explanation}
           </div>
         </div>
       </div>

@@ -22,7 +22,15 @@ export function useHome() {
     setIsOpenLoginModal(true);
   }, []);
 
-  const onClickMyPageBtn = useCallback(() => {}, []);
+  const onClickMyPageBtn = useCallback(() => {
+    if (!userData) {
+      setIsOpenLoginModal(true);
+
+      return;
+    }
+
+    setScene('my-page');
+  }, [userData, setScene, setIsOpenLoginModal]);
 
   const onClickLogoutBtn = useCallback(async () => {
     controllerRef.current?.abort();
@@ -32,8 +40,8 @@ export function useHome() {
 
     await logout(controller.signal);
 
-    setUserData(null);
-    setAccessToken(null);
+    setUserData(undefined);
+    setAccessToken(undefined);
   }, [setUserData, setAccessToken]);
 
   const onClickQuickStartBtn = useCallback(() => {
@@ -67,6 +75,16 @@ export function useHome() {
     setScene('problem-bank');
   }, [userData, setScene]);
 
+  const onClickLeaderboardBtn = useCallback(() => {
+    if (!userData) {
+      setIsOpenLoginModal(true);
+
+      return;
+    }
+
+    setScene('leaderboard');
+  }, [userData, setScene]);
+
   return {
     userData,
     isOpenLoginModal,
@@ -77,5 +95,6 @@ export function useHome() {
     onClickQuickStartBtn,
     onClickSelfStudyBtn,
     onClickProblemBankBtn,
+    onClickLeaderboardBtn,
   };
 }
