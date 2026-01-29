@@ -13,16 +13,16 @@ import { UserProblemBank } from '../../problem-bank/entity';
 
 @Entity('matches')
 export class Match {
-  @PrimaryGeneratedColumn('increment', { type: 'int4' })
+  @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id: number;
 
-  @Column({ type: 'int4', nullable: false, name: 'player1_id' })
+  @Column({ type: 'bigint', nullable: false, name: 'player1_id' })
   player1Id: number;
 
-  @Column({ type: 'int4', nullable: true, name: 'player2_id' })
+  @Column({ type: 'bigint', nullable: true, name: 'player2_id' })
   player2Id: number | null;
 
-  @Column({ type: 'int4', nullable: true, name: 'winner_id' })
+  @Column({ type: 'bigint', nullable: true, name: 'winner_id' })
   winnerId: number | null;
 
   @Column({
