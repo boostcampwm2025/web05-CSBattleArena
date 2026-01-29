@@ -22,6 +22,34 @@ export class SinglePlayController {
   constructor(private readonly singlePlayService: SinglePlayService) {}
 
   /**
+   * 싱글플레이 세션 시작 API
+   * POST /api/singleplay/start
+   */
+  @Post('start')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: '싱글플레이 세션 시작',
+    description: '싱글플레이 세션을 시작하고 matchId를 반환합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '세션 시작 성공',
+    schema: {
+      properties: {
+        matchId: { type: 'number', example: 123 },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: '인증 실패' })
+  async startSession(@CurrentUser() user: AuthenticatedUser): Promise<{ matchId: number }> {
+    const matchId = await this.singlePlayService.startSession(user.id);
+
+    return { matchId };
+  }
+
+  /**
    * 카테고리 목록 조회 API
    * GET /api/singleplay/categories
    */
@@ -164,6 +192,7 @@ export class SinglePlayController {
   ) {
     return await this.singlePlayService.submitAnswer(
       user.id,
+      submitDto.matchId,
       submitDto.questionId,
       submitDto.answer,
     );

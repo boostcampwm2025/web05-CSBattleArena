@@ -28,6 +28,27 @@ export class SinglePlayService {
   ) {}
 
   /**
+   * 싱글플레이 세션 시작
+   */
+  async startSession(userId: string): Promise<number> {
+    try {
+      const match = await this.connection.manager.save(Match, {
+        player1Id: this.parseUserId(userId),
+        player2Id: null,
+        winnerId: null,
+        matchType: 'single',
+      });
+
+      this.logger.log(`Single play session started for user ${userId}, matchId: ${match.id}`);
+
+      return match.id;
+    } catch (error) {
+      this.logger.error(`Failed to start session: ${(error as Error).message}`);
+      throw new InternalServerErrorException('세션 시작 중 오류가 발생했습니다.');
+    }
+  }
+
+  /**
    * 대분류 카테고리 목록 조회
    */
   async getCategories(): Promise<Array<{ id: number; name: string | null }>> {
@@ -93,6 +114,7 @@ export class SinglePlayService {
    */
   async submitAnswer(
     userId: string,
+    matchId: number,
     questionId: number,
     answer: string,
   ): Promise<{
@@ -108,6 +130,7 @@ export class SinglePlayService {
 
       const curExp = await this.saveAnswerResult(
         userId,
+        matchId,
         questionId,
         question,
         answer,
@@ -116,7 +139,7 @@ export class SinglePlayService {
       );
 
       this.logger.log(
-        `Answer submitted for user ${userId}, question ${questionId}, score: ${finalScore}`,
+        `Answer submitted for user ${userId}, matchId ${matchId}, question ${questionId}, score: ${finalScore}`,
       );
 
       const { level, needExpPoint, remainedExpPoint } = calcLevel(curExp);
@@ -195,10 +218,11 @@ export class SinglePlayService {
   }
 
   /**
-   * 답안 결과 DB 저장 (트랜잭션)
+   * 답안 결과 DB 저장
    */
   private async saveAnswerResult(
     userId: string,
+    matchId: number,
     questionId: number,
     question: QuestionEntity,
     answer: string,
@@ -208,12 +232,22 @@ export class SinglePlayService {
     return await this.connection.transaction(async (manager) => {
       const uid = this.parseUserId(userId);
 
-      const match = await manager.save(Match, {
-        player1Id: uid,
-        player2Id: null,
-        winnerId: null,
-        matchType: 'single',
+      // matchId, 소유자, matchType 검증
+      const match = await manager.findOne(Match, {
+        where: { id: matchId },
       });
+
+      if (!match) {
+        throw new NotFoundException('존재하지 않는 세션입니다.');
+      }
+
+      if (match.player1Id !== uid) {
+        throw new NotFoundException('본인의 세션이 아닙니다.');
+      }
+
+      if (match.matchType !== 'single') {
+        throw new NotFoundException('싱글플레이 세션이 아닙니다.');
+      }
 
       const answerStatus = this.quizService.determineAnswerStatus(
         question.questionType,
@@ -224,7 +258,7 @@ export class SinglePlayService {
       await manager.save(UserProblemBank, {
         userId: uid,
         questionId,
-        matchId: match.id,
+        matchId,
         userAnswer: answer,
         answerStatus,
         aiFeedback: grade.feedback,
@@ -251,7 +285,7 @@ export class SinglePlayService {
     const parsed = parseInt(userId, 10);
 
     if (isNaN(parsed)) {
-      throw new Error(`유효하지 않은 userId: ${userId}`);
+      throw new NotFoundException(`유효하지 않은 userId: ${userId}`);
     }
 
     return parsed;
