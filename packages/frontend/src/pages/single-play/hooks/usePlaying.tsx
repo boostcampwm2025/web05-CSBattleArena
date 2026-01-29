@@ -36,6 +36,15 @@ export function usePlaying() {
     if (matchId === null) {
       // TODO: 공통 에러 모달 - matchId가 없으면 세션이 시작되지 않은 것
       console.error('matchId가 없습니다. 세션을 다시 시작해주세요.');
+      setPhase({ kind: 'preparing' });
+
+      return;
+    }
+
+    if (!curQuestion?.id) {
+      // TODO: 공통 에러 모달 - 문제가 없으면 문제를 다시 불러와야 함
+      console.error('문제 정보가 없습니다. 카테고리를 다시 선택해주세요.');
+      setPhase({ kind: 'preparing' });
 
       return;
     }
@@ -45,7 +54,7 @@ export function usePlaying() {
     try {
       const data = await submitAnswer(
         accessToken,
-        { matchId, questionId: Number(curQuestion?.id), answer: trimmed },
+        { matchId, questionId: curQuestion.id, answer: trimmed },
         controller.signal,
       );
 
