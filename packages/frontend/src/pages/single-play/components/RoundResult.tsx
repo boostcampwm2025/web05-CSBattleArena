@@ -67,7 +67,10 @@ export default function RoundResult() {
             <div className="text-xs text-purple-300" style={{ fontFamily: 'Orbitron' }}>
               YOUR ANSWER
             </div>
-            <div className="text-base text-white" style={{ fontFamily: 'Orbitron' }}>
+            <div
+              className="whitespace-pre-wrap text-base text-white"
+              style={{ fontFamily: 'Orbitron' }}
+            >
               {submittedAnswer}
             </div>
           </div>
@@ -95,7 +98,10 @@ export default function RoundResult() {
             <i className="ri-lightbulb-line mr-2" />
             CORRECT ANSWER
           </div>
-          <div className="text-base text-white" style={{ fontFamily: 'Orbitron' }}>
+          <div
+            className="whitespace-pre-wrap text-base text-white"
+            style={{ fontFamily: 'Orbitron' }}
+          >
             {curQuestion?.type === 'multiple_choice' && curQuestion?.answer}
             {curQuestion?.type === 'short_answer' && curQuestion?.answer}
             {curQuestion?.type === 'essay' && curQuestion?.sampleAnswer}
@@ -108,7 +114,10 @@ export default function RoundResult() {
             <i className="ri-robot-2-line mr-2" />
             AI Feedback
           </div>
-          <div className="text-base text-white" style={{ fontFamily: 'Orbitron' }}>
+          <div
+            className="whitespace-pre-wrap text-base text-white"
+            style={{ fontFamily: 'Orbitron' }}
+          >
             {aiFeedback}
           </div>
         </div>
