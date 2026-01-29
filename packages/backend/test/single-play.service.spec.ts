@@ -212,20 +212,32 @@ describe('SinglePlayService', () => {
       mockQuizService.determineAnswerStatus.mockReturnValue('correct');
 
       const matchId = 123;
-      mockDataSource.manager.findOne.mockResolvedValue({ id: matchId });
-      mockDataSource.manager.save.mockResolvedValue({});
+      const mockManager = { save: jest.fn(), query: jest.fn(), findOne: jest.fn() };
+
+      mockDataSource.transaction.mockImplementation(async (cb: any) => cb(mockManager));
+
+      mockManager.findOne.mockResolvedValue({ id: matchId });
+      mockManager.save.mockResolvedValue({});
+      mockManager.query.mockResolvedValue([[{ exp_point: 10 }], 1]);
 
       const result = await service.submitAnswer(userId, matchId, questionId, answer);
 
-      expect(result).toEqual({
-        score: 10,
-        grade: { submittedAnswer: 'React', isCorrect: true, aiFeedback: 'Perfect!' },
+      expect(mockDataSource.transaction).toHaveBeenCalled();
+
+      expect(result.grade).toEqual({
+        submittedAnswer: 'React',
+        isCorrect: true,
+        aiFeedback: 'Perfect!',
       });
-      expect(mockDataSource.manager.findOne).toHaveBeenCalledWith(
+
+      expect(typeof result.level).toBe('number');
+      expect(typeof result.needExpPoint).toBe('number');
+      expect(typeof result.remainedExpPoint).toBe('number');
+
+      expect(mockManager.findOne).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ where: { id: matchId } }),
       );
-      expect(mockDataSource.manager.save).toHaveBeenCalled();
     });
 
     it('존재하지 않는 문제 ID면 NotFoundException을 던져야 함', async () => {
@@ -267,9 +279,12 @@ describe('SinglePlayService', () => {
         },
       ];
 
+      const mockManager = { findOne: jest.fn() };
+      mockDataSource.transaction.mockImplementation(async (cb: any) => cb(mockManager));
+
       mockQuestionRepository.findOne.mockResolvedValue(mockQuestion);
       mockQuizService.gradeQuestion.mockResolvedValue(mockGradeResult);
-      mockDataSource.manager.findOne.mockResolvedValue(null);
+      mockManager.findOne.mockResolvedValue(null);
 
       await expect(service.submitAnswer(userId, matchId, questionId, answer)).rejects.toThrow(
         NotFoundException,

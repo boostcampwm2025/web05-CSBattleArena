@@ -8,12 +8,12 @@ import {
 
 import { request } from './request';
 
-export function fetchCategories(accessToken: string | null, signal?: AbortSignal) {
+export function fetchCategories(accessToken: string | undefined, signal?: AbortSignal) {
   return request<GetCategoriesRes>('/api/singleplay/categories', accessToken, { signal });
 }
 
 export function fetchQuestion(
-  accessToken: string | null,
+  accessToken: string | undefined,
   categoryIds: number[],
   signal?: AbortSignal,
 ) {
@@ -31,7 +31,7 @@ export function startSession(accessToken: string | null, signal?: AbortSignal) {
 }
 
 export function submitAnswer(
-  accessToken: string | null,
+  accessToken: string | undefined,
   payload: SubmitAnswerReq,
   signal?: AbortSignal,
 ) {

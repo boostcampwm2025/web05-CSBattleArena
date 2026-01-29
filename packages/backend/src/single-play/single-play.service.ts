@@ -12,6 +12,7 @@ import { Question } from '../quiz/quiz.types';
 import { mapDifficulty, SCORE_MAP } from '../quiz/quiz.constants';
 import { Match } from '../match/entity';
 import { UserProblemBank } from '../problem-bank/entity';
+import { calcLevel } from '../common/utils/level.util';
 
 @Injectable()
 export class SinglePlayService {
@@ -117,27 +118,41 @@ export class SinglePlayService {
     questionId: number,
     answer: string,
   ): Promise<{
-    score: number;
     grade: { submittedAnswer: string; isCorrect: boolean; aiFeedback: string };
+    level: number;
+    needExpPoint: number;
+    remainedExpPoint: number;
   }> {
     try {
       const question = await this.findQuestionById(questionId);
       const grade = await this.gradeAnswer(question, answer);
       const finalScore = this.calculateFinalScore(question, grade);
 
-      await this.saveAnswerResult(userId, matchId, questionId, question, answer, grade);
+      const curExp = await this.saveAnswerResult(
+        userId,
+        matchId,
+        questionId,
+        question,
+        answer,
+        grade,
+        finalScore,
+      );
 
       this.logger.log(
         `Answer submitted for user ${userId}, matchId ${matchId}, question ${questionId}, score: ${finalScore}`,
       );
 
+      const { level, needExpPoint, remainedExpPoint } = calcLevel(curExp);
+
       return {
-        score: finalScore,
         grade: {
           submittedAnswer: answer,
           isCorrect: grade.isCorrect,
           aiFeedback: grade.feedback,
         },
+        level,
+        needExpPoint,
+        remainedExpPoint,
       };
     } catch (error) {
       if (error instanceof NotFoundException) {
@@ -212,29 +227,49 @@ export class SinglePlayService {
     question: QuestionEntity,
     answer: string,
     grade: { isCorrect: boolean; score: number; feedback: string },
-  ): Promise<void> {
-    // matchId 유효성 검증
-    const matchExists = await this.connection.manager.findOne(Match, {
-      where: { id: matchId },
-    });
+    finalScore: number,
+  ): Promise<number> {
+    return await this.connection.transaction(async (manager) => {
+      const uid = this.parseUserId(userId);
 
-    if (!matchExists) {
-      throw new NotFoundException('존재하지 않는 세션입니다.');
-    }
+      // matchId 유효성 검증
+      const matchExists = await manager.findOne(Match, {
+        where: { id: matchId },
+      });
 
-    const answerStatus = this.quizService.determineAnswerStatus(
-      question.questionType,
-      grade.isCorrect,
-      grade.score,
-    );
+      if (!matchExists) {
+        throw new NotFoundException('존재하지 않는 세션입니다.');
+      }
 
-    await this.connection.manager.save(UserProblemBank, {
-      userId: this.parseUserId(userId),
-      questionId,
-      matchId,
-      userAnswer: answer,
-      answerStatus,
-      aiFeedback: grade.feedback,
+      const answerStatus = this.quizService.determineAnswerStatus(
+        question.questionType,
+        grade.isCorrect,
+        grade.score,
+      );
+
+      await manager.save(UserProblemBank, {
+        userId: uid,
+        questionId,
+        matchId,
+        userAnswer: answer,
+        answerStatus,
+        aiFeedback: grade.feedback,
+      });
+
+      const result: [{ exp_point: number }[], number] = await manager.query(
+        `
+        UPDATE user_statistics
+        SET exp_point = COALESCE(exp_point, 0) + $1
+        WHERE user_id = $2
+        RETURNING exp_point
+        `,
+        [finalScore, uid],
+      );
+
+      const rows = result[0];
+      const curExp = rows[0]?.exp_point ?? 0;
+
+      return curExp;
     });
   }
 

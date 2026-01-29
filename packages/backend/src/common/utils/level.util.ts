@@ -1,14 +1,27 @@
-export interface LevelInfo {
-  level: number;
-  expPoint: number;
-  expForCurrentLevel: number;
-  expForNextLevel: number;
+type LevelInfo = { level: number; needExpPoint: number; remainedExpPoint: number };
+
+export function calcExpToNextLevel(level: number) {
+  const base = 100;
+  const inc = 100;
+  const max_inc = 50;
+
+  return base + inc * (Math.min(level, max_inc) - 1);
 }
 
-export function calculateLevel(expPoint: number): LevelInfo {
-  const level = Math.floor(expPoint / 100);
-  const expForCurrentLevel = expPoint % 100;
-  const expForNextLevel = 100 - expForCurrentLevel;
+export function calcLevel(totalExpPoint: number): LevelInfo {
+  let level = 1;
+  let remained = Math.max(0, Math.floor(totalExpPoint));
 
-  return { level, expPoint, expForCurrentLevel, expForNextLevel };
+  while (remained > 0) {
+    const need = calcExpToNextLevel(level);
+
+    if (remained < need) {
+      break;
+    }
+
+    level += 1;
+    remained -= need;
+  }
+
+  return { level, needExpPoint: calcExpToNextLevel(level), remainedExpPoint: remained };
 }

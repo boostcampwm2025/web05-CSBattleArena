@@ -12,8 +12,8 @@ export class RankDto {
 
 export class LevelDto {
   level: number;
-  expForCurrentLevel: number;
-  expForNextLevel: number;
+  needExpPoint: number;
+  remainedExpPoint: number;
 }
 
 export class MatchStatsDto {
@@ -35,7 +35,7 @@ export class ProblemStatsDto {
 export class MyPageResponseDto {
   profile: ProfileDto;
   rank: RankDto;
-  level: LevelDto;
+  levelInfo: LevelDto;
   matchStats: MatchStatsDto;
   problemStats: ProblemStatsDto;
 }

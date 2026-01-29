@@ -6,7 +6,7 @@ import { useUser } from '@/feature/auth/useUser';
 import { useMatchId, usePhase, useQuestion } from '@/feature/single-play/useRound';
 
 export function usePlaying() {
-  const { accessToken } = useUser();
+  const { accessToken, setUserData } = useUser();
 
   const { phase, setPhase } = usePhase();
   const { curQuestion } = useQuestion();
@@ -49,6 +49,19 @@ export function usePlaying() {
         controller.signal,
       );
 
+      setUserData((prev) => {
+        if (!prev) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          level: data.level,
+          needExpPoint: data.needExpPoint,
+          remainedExpPoint: data.remainedExpPoint,
+        };
+      });
+
       setPhase({
         kind: 'result',
         result: {
@@ -68,7 +81,7 @@ export function usePlaying() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [accessToken, answer, phase.kind, setPhase, curQuestion, matchId]);
+  }, [accessToken, setUserData, answer, phase.kind, setPhase, curQuestion, matchId]);
 
   return {
     answer,

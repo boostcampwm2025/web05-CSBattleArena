@@ -79,7 +79,7 @@ export default function Home() {
                       className="text-base font-bold text-pink-400"
                       style={{ fontFamily: 'Orbitron' }}
                     >
-                      LV.42
+                      LV.{userData.level}
                     </span>
                   </div>
                 </div>
@@ -92,19 +92,23 @@ export default function Home() {
                   style={{ fontFamily: 'Orbitron' }}
                 >
                   <span>EXP</span>
-                  <span>{userData.expPoint} / 10000</span>
+                  <span>
+                    {userData.remainedExpPoint} / {userData.needExpPoint}
+                  </span>
                 </div>
 
                 <div className="relative h-5 w-full overflow-hidden border-2 border-cyan-500 bg-slate-700">
                   <div
                     className="h-full bg-gradient-to-r from-cyan-400 to-purple-500 transition-all duration-500"
-                    style={{ width: `${userData.expPoint / 100}%` }}
+                    style={{
+                      width: `${(userData.remainedExpPoint / userData.needExpPoint) * 100}%`,
+                    }}
                   />
                   <div
                     className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white"
                     style={{ fontFamily: 'Orbitron' }}
                   >
-                    {Math.round(userData.expPoint / 100)}%
+                    {Math.round((userData.remainedExpPoint / userData.needExpPoint) * 100)}%
                   </div>
                 </div>
               </div>
