@@ -107,13 +107,15 @@ export class QuizService {
     childIds: number[],
     limit: number,
   ): Promise<QuestionEntity[]> {
-    return await this.questionRepository
+    const query = this.questionRepository
       .createQueryBuilder('q')
       .leftJoinAndSelect('q.categoryQuestions', 'cq')
       .leftJoinAndSelect('cq.category', 'c')
       .leftJoinAndSelect('c.parent', 'parent')
       .where('q.isActive = :isActive', { isActive: true })
-      .andWhere('cq.categoryId IN (:...childIds)', { childIds })
+      .andWhere('cq.categoryId IN (:...childIds)', { childIds });
+
+    return await query
       .orderBy('q.usageCount', 'ASC')
       .addOrderBy('q.qualityScore', 'DESC')
       .addOrderBy('RANDOM()')
@@ -251,20 +253,26 @@ export class QuizService {
     type: string,
     count: number,
   ): Promise<QuestionEntity[]> {
-    return await this.questionRepository
+    const query = this.questionRepository
       .createQueryBuilder('q')
       .leftJoinAndSelect('q.categoryQuestions', 'cq')
       .leftJoinAndSelect('cq.category', 'c')
       .leftJoinAndSelect('c.parent', 'parent')
       .where('q.isActive = :isActive', { isActive: true })
       .andWhere('q.difficulty BETWEEN :min AND :max', { min: minDifficulty, max: maxDifficulty })
-      .andWhere('q.questionType = :type', { type })
+      .andWhere('q.questionType = :type', { type });
+
+    return await query
       .orderBy('q.usageCount', 'ASC') // 사용 빈도 낮은 것 우선
       .addOrderBy('q.qualityScore', 'DESC') // 품질 높은 것 우선
       .addOrderBy('RANDOM()') // 동일 조건 내에서 랜덤
       .limit(count)
       .getMany();
   }
+
+  /**
+   * 유저들이 이미 푼 문제 ID 목록 조회
+   */
 
   /**
    * QuestionEntity를 quiz.types.ts의 Question 타입으로 변환
