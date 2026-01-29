@@ -59,19 +59,6 @@ export default function Playing() {
 
           <div className="text-xl leading-relaxed text-white" style={{ fontFamily: 'Orbitron' }}>
             {content?.question}
-            {content?.type === 'multiple' && (
-              <span>
-                <br />
-                <br />
-                {`A: ${content.option[0]}`}
-                <br />
-                {`B: ${content.option[1]}`}
-                <br />
-                {`C: ${content.option[2]}`}
-                <br />
-                {`D: ${content.option[3]}`}
-              </span>
-            )}
           </div>
 
           {/* Answer Input */}
@@ -115,15 +102,45 @@ export default function Playing() {
             </div>
           ) : (
             <div className="flex flex-col gap-4">
-              <input
-                type="text"
-                placeholder="Type your answer here..."
-                className="border-2 border-cyan-400 bg-slate-700 px-4 py-3 text-base text-white focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-                style={{ fontFamily: 'Orbitron' }}
-                autoFocus
-                onChange={(e) => setAnswer(e.target.value)}
-                disabled={isSubmitting}
-              />
+              {content?.type === 'multiple' ? (
+                <div className="flex flex-col gap-3">
+                  {(['A', 'B', 'C', 'D'] as const).map((key, idx) => (
+                    <button
+                      key={key}
+                      className={`flex items-center gap-4 border-2 px-4 py-3 text-left text-base text-white transition-all duration-200 hover:border-purple-400 ${answer === key ? 'border-cyan-400 bg-cyan-500/20 shadow-lg shadow-cyan-500/30' : 'border-slate-500 bg-slate-700/50'}`}
+                      style={{ fontFamily: 'Orbitron' }}
+                      onClick={() => setAnswer(key)}
+                      disabled={isSubmitting}
+                    >
+                      <span
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center border-2 text-sm font-bold ${answer === key ? 'border-cyan-300 bg-cyan-500 text-white' : 'border-slate-400 bg-slate-600 text-slate-300'}`}
+                      >
+                        {key}
+                      </span>
+                      <span>{content.option[idx]}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  placeholder="Type your answer here..."
+                  className="border-2 border-cyan-400 bg-slate-700 px-4 py-3 text-base text-white focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                  style={{ fontFamily: 'Orbitron' }}
+                  autoFocus
+                  onChange={(e) => setAnswer(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.nativeEvent.isComposing) {
+                      return;
+                    }
+
+                    if (e.key === 'Enter' && answer.trim() !== '' && !isSubmit && !isSubmitting) {
+                      onClickSubmitBtn();
+                    }
+                  }}
+                  disabled={isSubmitting}
+                />
+              )}
               <button
                 className="w-full border-4 border-cyan-300 bg-gradient-to-r from-cyan-500 to-blue-500 py-3 font-bold text-white shadow-lg shadow-cyan-500/50 transition-all duration-200 enabled:hover:scale-105 enabled:hover:from-cyan-400 enabled:hover:to-blue-400 disabled:border-cyan-300/40 disabled:from-cyan-900/50 disabled:to-blue-900/50 disabled:text-white/70 disabled:shadow-cyan-500/20"
                 disabled={answer.trim() === '' || isSubmit || isSubmitting}
