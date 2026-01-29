@@ -5,6 +5,7 @@ from db import get_connection, get_cursor
 from category_loader import get_leaf_category_with_least_questions
 from hyde_generator import generate_hyde_query
 from token_calculator import TokenUsage
+from reranker import rerank_chunks, get_question_count
 
 
 @dataclass
@@ -140,6 +141,65 @@ def retrieve_chunks(
     chunks = retrieve_similar_chunks(query_embedding, top_k)
 
     return chunks, usage
+
+
+@dataclass
+class RetrievalResult:
+    """Reranker 포함 검색 결과"""
+    chunks: list[RetrievedChunk]
+    question_count: int
+    hyde_usage: TokenUsage
+    reranker_usage: TokenUsage
+
+
+def retrieve_chunks_with_reranker(
+    category: "CategoryInfo", top_k: int = 10
+) -> RetrievalResult:
+    """HyDE + Vector + Reranker 전략으로 청크 검색
+
+    Args:
+        category: 카테고리 정보
+        top_k: 초기 검색할 청크 수 (reranker 전)
+
+    Returns:
+        RetrievalResult: 검색된 청크, 문제 수, 토큰 사용량
+    """
+    # 1. HyDE 쿼리 생성
+    hyde_query, hyde_usage = generate_hyde_query(category)
+
+    # 2. 쿼리 임베딩
+    query_embedding = get_query_embedding(hyde_query)
+
+    # 3. Vector 유사도 검색 (넉넉하게)
+    initial_chunks = retrieve_similar_chunks(query_embedding, top_k)
+
+    # 4. Reranker로 관련성 높은 청크 필터링
+    chunks_for_rerank = [
+        {"id": chunk.id, "content": chunk.content}
+        for chunk in initial_chunks
+    ]
+    reranker_result = rerank_chunks(hyde_query, chunks_for_rerank)
+
+    # 5. 인용된 청크만 필터링
+    cited_ids = set(reranker_result.cited_doc_ids)
+    if cited_ids:
+        filtered_chunks = [
+            chunk for chunk in initial_chunks
+            if str(chunk.id) in cited_ids
+        ]
+    else:
+        # 인용된 청크가 없으면 빈 리스트
+        filtered_chunks = []
+
+    # 6. 문제 수 결정
+    question_count = get_question_count(len(filtered_chunks))
+
+    return RetrievalResult(
+        chunks=filtered_chunks,
+        question_count=question_count,
+        hyde_usage=hyde_usage,
+        reranker_usage=reranker_result.usage,
+    )
 
 
 if __name__ == "__main__":
