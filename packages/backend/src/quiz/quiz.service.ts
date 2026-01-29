@@ -466,26 +466,10 @@ export class QuizService {
    * 객관식 채점 (내부 메서드)
    */
   private gradeMultipleChoice(question: QuestionEntity, submissions: Submission[]): GradeResult[] {
-    const parsedContent =
-      typeof question.content === 'string'
-        ? (JSON.parse(question.content) as { question: string; options: MultipleChoiceOptions })
-        : (question.content as { question: string; options: MultipleChoiceOptions });
-    const options = parsedContent?.options;
-
     return submissions.map((sub) => {
       const sanitizedAnswer = sub.answer.trim().toUpperCase() as keyof MultipleChoiceOptions;
       const isCorrect = sanitizedAnswer === question.correctAnswer;
-      const correctAnswerKey = question.correctAnswer as keyof MultipleChoiceOptions;
-
-      let feedback: string;
-
-      if (isCorrect) {
-        feedback = '정답입니다!';
-      } else if (options && options[correctAnswerKey]) {
-        feedback = `오답입니다. 정답은 ${question.correctAnswer}번 "${options[correctAnswerKey]}"입니다.`;
-      } else {
-        feedback = `오답입니다. 정답은 ${question.correctAnswer}번입니다.`;
-      }
+      const feedback = question.explanation;
 
       return {
         playerId: sub.playerId,
