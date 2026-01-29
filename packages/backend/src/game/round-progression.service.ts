@@ -4,7 +4,7 @@ import { RoundTimer } from './round-timer';
 import { QuizService } from '../quiz/quiz.service';
 import { GameSessionManager } from './game-session-manager';
 import { MatchPersistenceService } from './match-persistence.service';
-import { Difficulty, QuestionType, ROUND_DURATIONS } from './round-timer.constants';
+import { Difficulty, getValidQuestionType, ROUND_DURATIONS } from './round-timer.constants';
 import { SPEED_BONUS } from '../quiz/quiz.constants';
 import { transformQuestionForClient } from './transformers/question.transformer';
 import { FinalResult } from './interfaces/game.interfaces';
@@ -96,7 +96,7 @@ export class RoundProgressionService {
         difficulty = 'hard';
       }
 
-      const questionType: QuestionType = (question.questionType as QuestionType) || 'short';
+      const questionType = getValidQuestionType(question.questionType);
       const questionDuration = ROUND_DURATIONS.QUESTION[questionType][difficulty];
 
       // Question 변환 (transformer 사용)
@@ -245,7 +245,7 @@ export class RoundProgressionService {
       }
 
       // 문제 타입에 따른 리뷰 시간 계산
-      const questionType: QuestionType = (question.questionType as QuestionType) || 'short';
+      const questionType = getValidQuestionType(question.questionType);
       const reviewDuration = ROUND_DURATIONS.REVIEW[questionType];
 
       // 문제 타입에 따라 정답 추출

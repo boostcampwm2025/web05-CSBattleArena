@@ -15,3 +15,18 @@ export const ROUND_DURATIONS = {
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
 export type QuestionType = 'multiple' | 'short' | 'essay';
+
+export const VALID_QUESTION_TYPES: readonly QuestionType[] = ['multiple', 'short', 'essay'];
+
+/**
+ * 문제 타입 검증 및 변환
+ * - DB Entity의 questionType 값 검증
+ * - 유효하지 않은 값은 기본값 'short' 반환
+ */
+export function getValidQuestionType(questionType: string | null | undefined): QuestionType {
+  if (questionType && VALID_QUESTION_TYPES.includes(questionType as QuestionType)) {
+    return questionType as QuestionType;
+  }
+
+  return 'short';
+}
