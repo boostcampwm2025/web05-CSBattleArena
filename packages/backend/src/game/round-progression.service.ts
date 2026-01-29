@@ -4,7 +4,7 @@ import { RoundTimer } from './round-timer';
 import { QuizService } from '../quiz/quiz.service';
 import { GameSessionManager } from './game-session-manager';
 import { MatchPersistenceService } from './match-persistence.service';
-import { Difficulty, ROUND_DURATIONS } from './round-timer.constants';
+import { Difficulty, QuestionType, ROUND_DURATIONS } from './round-timer.constants';
 import { SPEED_BONUS } from '../quiz/quiz.constants';
 import { transformQuestionForClient } from './transformers/question.transformer';
 import { FinalResult } from './interfaces/game.interfaces';
@@ -96,7 +96,8 @@ export class RoundProgressionService {
         difficulty = 'hard';
       }
 
-      const questionDuration = ROUND_DURATIONS.QUESTION[difficulty];
+      const questionType: QuestionType = (question.questionType as QuestionType) || 'short';
+      const questionDuration = ROUND_DURATIONS.QUESTION[questionType][difficulty];
 
       // Question 변환 (transformer 사용)
       const categories = this.quizService.extractCategory(question);
@@ -243,6 +244,10 @@ export class RoundProgressionService {
         throw new Error(`Question not found for room ${roomId}`);
       }
 
+      // 문제 타입에 따른 리뷰 시간 계산
+      const questionType: QuestionType = (question.questionType as QuestionType) || 'short';
+      const reviewDuration = ROUND_DURATIONS.REVIEW[questionType];
+
       // 문제 타입에 따라 정답 추출
       let bestAnswer: string;
 
@@ -260,7 +265,7 @@ export class RoundProgressionService {
 
       // Player 1에게 발송
       this.server.to(session.player1SocketId).emit('round:end', {
-        durationSec: ROUND_DURATIONS.REVIEW,
+        durationSec: reviewDuration,
         results: {
           my: {
             submitted: player1Grade.answer,
@@ -283,7 +288,7 @@ export class RoundProgressionService {
 
       // Player 2에게 발송
       this.server.to(session.player2SocketId).emit('round:end', {
-        durationSec: ROUND_DURATIONS.REVIEW,
+        durationSec: reviewDuration,
         results: {
           my: {
             submitted: player2Grade.answer,
@@ -305,12 +310,12 @@ export class RoundProgressionService {
       });
 
       // 리뷰 타이머 시작
-      this.roundTimer.startReviewTimer(roomId, ROUND_DURATIONS.REVIEW, () => {
+      this.roundTimer.startReviewTimer(roomId, reviewDuration, () => {
         void this.transitionToNextRound(roomId);
       });
 
       // 틱 인터벌 시작
-      this.roundTimer.startTickInterval(roomId, ROUND_DURATIONS.REVIEW, (remainedSec) => {
+      this.roundTimer.startTickInterval(roomId, reviewDuration, (remainedSec) => {
         this.server.to(roomId).emit('round:tick', { remainedSec });
       });
     } catch (error) {
