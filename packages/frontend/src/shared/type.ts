@@ -115,7 +115,7 @@ export type Opponent = {
 
 export type MultiMatch = {
   opponent: Opponent;
-  result: 'win' | 'lose';
+  result: 'win' | 'lose' | 'draw';
   myScore: number;
   opponentScore: number;
   tierPointChange: number;

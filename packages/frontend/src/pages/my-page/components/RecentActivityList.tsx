@@ -8,13 +8,27 @@ const getMatchConfig = (item: MatchHistoryItem) => {
   if (item.type === 'multi') {
     const match = item.match as MultiMatch;
 
-    if (match.result === 'win') {
+    const isWin = match.result === 'win';
+    const scoreDisplay = `${match.myScore} : ${match.opponentScore}`;
+    const pointDisplay =
+      match.tierPointChange > 0 ? `+${match.tierPointChange}` : `${match.tierPointChange}`;
+
+    if (isWin) {
       return {
         icon: 'ri-sword-line',
         color: '#4ade80',
         bgColor: 'rgba(74, 222, 128, 0.1)',
         title: `Victory vs ${match.opponent.nickname}`,
-        description: `+${match.tierPointChange}`,
+        description: `Score ${scoreDisplay} (${pointDisplay} RP)`,
+        date: match.playedAt,
+      };
+    } else if (match.result === 'draw') {
+      return {
+        icon: 'ri-subtract-line',
+        color: '#facc15',
+        bgColor: 'rgba(250, 204, 21, 0.1)',
+        title: `Draw vs ${match.opponent.nickname}`,
+        description: `Score ${scoreDisplay} (${pointDisplay} RP)`,
         date: match.playedAt,
       };
     } else {
@@ -23,7 +37,7 @@ const getMatchConfig = (item: MatchHistoryItem) => {
         color: '#f87171',
         bgColor: 'rgba(248, 113, 113, 0.1)',
         title: `Defeat vs ${match.opponent.nickname}`,
-        description: `${match.tierPointChange}`,
+        description: `Score ${scoreDisplay} (${pointDisplay} RP)`,
         date: match.playedAt,
       };
     }
