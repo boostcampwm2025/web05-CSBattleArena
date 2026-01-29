@@ -241,7 +241,10 @@ export class SinglePlayService {
         throw new NotFoundException('존재하지 않는 세션입니다.');
       }
 
-      if (match.player1Id !== uid) {
+      // TypeORM이 bigint를 string으로 반환하므로 Number로 변환하여 비교
+      const matchOwnerId = Number(match.player1Id);
+
+      if (matchOwnerId !== uid) {
         throw new NotFoundException('본인의 세션이 아닙니다.');
       }
 
