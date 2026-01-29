@@ -37,7 +37,7 @@ def get_evaluator_llm():
 def get_evaluator_embeddings():
     """평가용 Gemini 임베딩 모델 초기화"""
     langchain_embeddings = GoogleGenerativeAIEmbeddings(
-        model="models/embedding-001",
+        model="models/gemini-embedding-001",
         google_api_key=config.GEMINI_API_KEY,
     )
     return LangchainEmbeddingsWrapper(langchain_embeddings)
