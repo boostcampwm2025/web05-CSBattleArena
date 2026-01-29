@@ -6,8 +6,9 @@ from pathlib import Path
 from dataclasses import dataclass
 
 from category_loader import get_leaf_category_with_least_questions
-from retriever import retrieve_chunks
+from retriever import retrieve_chunks_with_reranker
 from question_generator import generate_questions
+from postprocessor import postprocess_questions
 from evaluator import evaluate_questions
 from config import config
 from schemas import QuestionGenerationContext
@@ -25,15 +26,17 @@ MAX_ROUNDS = 10
 class CostTracker:
     """비용 추적"""
     hyde: float = 0.0
+    reranker: float = 0.0
     generation: float = 0.0
+    postprocess: float = 0.0
     evaluation: float = 0.0
 
     @property
     def total(self) -> float:
-        return self.hyde + self.generation + self.evaluation
+        return self.hyde + self.reranker + self.generation + self.postprocess + self.evaluation
 
     def summary(self) -> str:
-        return f"HyDE {self.hyde:.1f}원 + 생성 {self.generation:.1f}원 + 평가 {self.evaluation:.1f}원 = {self.total:.1f}원"
+        return f"HyDE {self.hyde:.1f}원 + Reranker {self.reranker:.1f}원 + 생성 {self.generation:.1f}원 + 후처리 {self.postprocess:.1f}원 + 평가 {self.evaluation:.1f}원 = {self.total:.1f}원"
 
 
 class Logger:
@@ -146,14 +149,17 @@ def run_pipeline():
 
         logger.log(f"Round {round_num}: {category.name} (ID:{category.id})")
 
-        # 2. 청크 검색
+        # 2. 청크 검색 + Reranker
         try:
-            chunks, hyde_usage = retrieve_chunks(category, top_k=config.TOP_K_CHUNKS)
-            if not chunks:
+            retrieval = retrieve_chunks_with_reranker(category, top_k=10)
+            if not retrieval.chunks or retrieval.question_count == 0:
+                logger.log(f"관련 청크 없음 (스킵)", indent=1)
                 round_num += 1
                 continue
-            cost.hyde += hyde_usage.total_cost
-            logger.log(f"청크 검색: {len(chunks)}개 ({hyde_usage.total_cost:.1f}원)", indent=1)
+            cost.hyde += retrieval.hyde_usage.total_cost
+            cost.reranker += retrieval.reranker_usage.total_cost
+            retrieval_cost = retrieval.hyde_usage.total_cost + retrieval.reranker_usage.total_cost
+            logger.log(f"청크 검색: {len(retrieval.chunks)}개, 목표 문제: {retrieval.question_count}개 ({retrieval_cost:.1f}원)", indent=1)
         except Exception as e:
             logger.log(f"청크 검색 실패: {e}", indent=1)
             round_num += 1
@@ -164,8 +170,9 @@ def run_pipeline():
             category_id=category.id,
             category_name=category.name,
             category_path=category.path,
-            chunks=[c.content for c in chunks],
-            chunk_ids=[c.id for c in chunks],
+            chunks=[c.content for c in retrieval.chunks],
+            chunk_ids=[c.id for c in retrieval.chunks],
+            target_question_count=retrieval.question_count,
         )
 
         try:
@@ -180,10 +187,19 @@ def run_pipeline():
             round_num += 1
             continue
 
-        # 4. 평가
+        # 4. 해설 후처리
+        questions_dict = [q.to_dict() for q in questions]
+        try:
+            questions_dict, pp_usage = postprocess_questions(questions_dict)
+            cost.postprocess += pp_usage.total_cost
+            logger.log(f"후처리: {len(questions_dict)}개 ({pp_usage.total_cost:.1f}원)", indent=1)
+        except Exception as e:
+            logger.log(f"후처리 실패 (원본 유지): {e}", indent=1)
+
+        # 5. 평가
         try:
             passed, rejected, eval_usage = evaluate_and_classify(
-                [q.to_dict() for q in questions]
+                questions_dict
             )
             cost.evaluation += eval_usage.total_cost
             logger.log(f"평가: 합격 {len(passed)}개, 탈락 {len(rejected)}개 ({eval_usage.total_cost:.1f}원)", indent=1)
@@ -192,13 +208,13 @@ def run_pipeline():
             round_num += 1
             continue
 
-        # 5. 결과 누적
+        # 6. 결과 누적
         all_passed.extend(passed)
         all_rejected.extend(rejected)
 
         logger.log(f"누적: {len(all_passed)}/{TARGET_QUESTIONS}", indent=1)
 
-        # 6. 중간 저장
+        # 7. 중간 저장
         with open(passed_file, 'w', encoding='utf-8') as f:
             json.dump(all_passed, f, ensure_ascii=False, indent=2)
         with open(rejected_file, 'w', encoding='utf-8') as f:
