@@ -12,7 +12,7 @@
 [![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?logo=langchain&logoColor=white)](https://www.langchain.com/)
 [![pnpm](https://img.shields.io/badge/pnpm-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
 
-[📖 Project Wiki](https://github.com/boostcampwm2025/web05-boostcamp/wiki) &nbsp; | &nbsp; [🚀 Live Demo](<!-- 배포 URL -->)
+[📖 Project Wiki](https://github.com/boostcampwm2025/web05-boostcamp/wiki) &nbsp; | &nbsp; [🚀 Live Demo](https://cs-arena.site)
 
 </div>
 
@@ -71,7 +71,7 @@ AI 기반 학습 도구가 늘어나고 있지만, 환각(Hallucination) 현상�
 
 ### 🏆 티어 & 리더보드
 
-- 브론즈 ~ 마스터 티어 시스템
+- 브론즈 ~ 다이아 티어 시스템
 - 학습 활동과 대전 승패에 따른 점수 산정
 - 리더보드를 통한 순위 경쟁
 
@@ -228,7 +228,7 @@ pnpm dev
 
   <br />
 
-  **[📖 프로젝트 위키](https://github.com/boostcampwm2025/web05-boostcamp/wiki)** &nbsp; | &nbsp; **[🚀 라이브 데모](<!-- 배포 URL -->)**
+  **[📖 프로젝트 위키](https://github.com/boostcampwm2025/web05-boostcamp/wiki)** &nbsp; | &nbsp; **[🚀 라이브 데모](https://cs-arena.site)**
 
   <br />
 
