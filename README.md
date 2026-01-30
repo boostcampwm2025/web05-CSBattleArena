@@ -12,7 +12,7 @@
 [![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?logo=langchain&logoColor=white)](https://www.langchain.com/)
 [![pnpm](https://img.shields.io/badge/pnpm-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
 
-[📖 Project Wiki](https://github.com/boostcampwm2025/web05-boostcamp/wiki) &nbsp; | &nbsp; [🚀 Live Demo](https://cs-arena.site)
+**[📖 프로젝트 위키](https://github.com/boostcampwm2025/web05-boostcamp/wiki)** &nbsp; | &nbsp; **[🚀 라이브 데모](https://cs-arena.site)**
 
 </div>
 
