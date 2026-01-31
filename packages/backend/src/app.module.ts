@@ -16,6 +16,7 @@ import { WinstonModule } from 'nest-winston';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { TierModule } from './tier/tier.module';
+import { SentryGlobalFilter, SentryModule } from '@sentry/nestjs/setup';
 
 const configModule = ConfigModule.forRoot({
   isGlobal: true,
@@ -26,7 +27,7 @@ const configModule = ConfigModule.forRoot({
 });
 
 const typeOrmModule = TypeOrmModule.forRootAsync({
-  imports: [ConfigModule],
+  imports: [SentryModule.forRoot(), ConfigModule],
   useFactory: (configService: ConfigService) => ({
     type: 'postgres',
     host: configService.get('DB_HOST', 'localhost'),
@@ -58,7 +59,13 @@ const metadata: ModuleMetadata = {
     UserModule,
   ],
   controllers: [AppController, HealthController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: 'APP_FILTER',
+      useClass: SentryGlobalFilter,
+    },
+  ],
 };
 
 @Module(metadata)
