@@ -126,9 +126,9 @@ AI 기반 학습 도구가 늘어나고 있지만, 환각(Hallucination) 현상�
 ## 🏗️ 인프라 아키텍처 (Architecture)
 
 <!-- 아키텍처 다이어그램 이미지 추가 필요 -->
-<!-- <div align="center">
-  <img width="100%" alt="Infrastructure Diagram" src="아키텍처_이미지_URL" />
-</div> -->
+<div align="center">
+  <img width="3768" height="2364" alt="image" src="https://github.com/user-attachments/assets/ec98bdc0-f8f9-4113-be38-11d33e4216c3" />
+</div>
 
 <br />
 
