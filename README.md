@@ -194,8 +194,4 @@ pnpm dev:local
 
   질문이나 피드백은 언제나 환영합니다.
 
-  <br />
-  <br />
-
-  Copyright © 2025 **CS 배틀 아레나 Team**. All rights reserved.
 </div>
