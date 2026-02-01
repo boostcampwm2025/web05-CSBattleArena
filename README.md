@@ -155,8 +155,8 @@ winget install OpenJS.NodeJS.LTS
 npm install -g pnpm
                                                                                                                                                                                    
 # 3. 저장소 클론                                                                                     
-git clone https://github.com/boostcampwm2025/web05-boostcamp.git                                 
-cd web05-boostcamp
+git clone https://github.com/boostcampwm2025/web05-CSArena.git                               
+cd web05-CSArena
                                                                                                                                                                            
 # 4. 의존성 설치                                                                                     
 pnpm install
