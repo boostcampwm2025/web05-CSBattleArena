@@ -31,8 +31,8 @@ def get_question_schema(target_count: int = 10) -> dict:
                         },
                         "difficulty": {
                             "type": "integer",
-                            "enum": [1, 2, 3],
-                            "description": "난이도 (1=기초, 2=중급, 3=심화)",
+                            "enum": [1, 2, 3, 4, 5],
+                            "description": "난이도 (1=매우쉬움, 2=쉬움, 3=보통, 4=어려움, 5=매우어려움)",
                         },
                         "question": {
                             "type": "string",
