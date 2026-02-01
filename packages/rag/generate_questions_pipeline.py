@@ -10,6 +10,7 @@ from retriever import retrieve_chunks_with_reranker
 from question_generator import generate_questions
 from postprocessor import postprocess_questions
 from evaluator import evaluate_questions
+from question_saver import save_questions_to_db
 from config import config
 from schemas import QuestionGenerationContext
 from token_calculator import TokenUsage
@@ -107,7 +108,6 @@ def run_pipeline():
     """메인 파이프라인 실행"""
     output_dir = get_output_directory()
     log_file = output_dir / "pipeline.log"
-    passed_file = output_dir / "passed_questions.json"
     rejected_file = output_dir / "rejected_questions.json"
 
     logger = Logger(str(log_file))
@@ -115,25 +115,13 @@ def run_pipeline():
 
     logger.log(f"파이프라인 시작 (목표: {config.TARGET_QUESTIONS}개)")
 
-    # 기존 결과 로드
-    all_passed = []
-    all_rejected = []
-
-    if passed_file.exists():
-        with open(passed_file, 'r', encoding='utf-8') as f:
-            all_passed = json.load(f)
-        if all_passed:
-            logger.log(f"기존 결과 로드: {len(all_passed)}개")
-
-    if len(all_passed) >= config.TARGET_QUESTIONS:
-        logger.log(f"이미 목표 달성 ({len(all_passed)}/{config.TARGET_QUESTIONS})")
-        return
-
     # 메인 루프
     tried_categories = set()
     round_num = 1
+    total_saved = 0
+    all_rejected = []
 
-    while len(all_passed) < config.TARGET_QUESTIONS and round_num <= MAX_ROUNDS:
+    while total_saved < config.TARGET_QUESTIONS and round_num <= MAX_ROUNDS:
         # 1. 카테고리 선택
         try:
             category = get_leaf_category_with_least_questions()
@@ -207,38 +195,30 @@ def run_pipeline():
             round_num += 1
             continue
 
-        # 6. 결과 누적
-        all_passed.extend(passed)
+        # 6. 합격 문제 DB 저장
+        if passed:
+            try:
+                saved_ids = save_questions_to_db(passed)
+                total_saved += len(saved_ids)
+                logger.log(f"DB 저장: {len(saved_ids)}개 (IDs: {saved_ids})", indent=1)
+            except Exception as e:
+                logger.log(f"DB 저장 실패: {e}", indent=1)
+
+        # 7. 탈락 문제 파일 저장
         all_rejected.extend(rejected)
-
-        logger.log(f"누적: {len(all_passed)}/{config.TARGET_QUESTIONS}", indent=1)
-
-        # 7. 중간 저장
-        with open(passed_file, 'w', encoding='utf-8') as f:
-            json.dump(all_passed, f, ensure_ascii=False, indent=2)
         with open(rejected_file, 'w', encoding='utf-8') as f:
             json.dump(all_rejected, f, ensure_ascii=False, indent=2)
 
-        if len(all_passed) >= config.TARGET_QUESTIONS:
+        logger.log(f"누적: {total_saved}/{config.TARGET_QUESTIONS}", indent=1)
+
+        if total_saved >= config.TARGET_QUESTIONS:
             break
 
         round_num += 1
 
-    # 최종 저장
-    with open(passed_file, 'w', encoding='utf-8') as f:
-        json.dump(all_passed, f, ensure_ascii=False, indent=2)
-    with open(rejected_file, 'w', encoding='utf-8') as f:
-        json.dump(all_rejected, f, ensure_ascii=False, indent=2)
-
     # 최종 리포트
     logger.log("완료")
-    logger.log(f"결과: 합격 {len(all_passed)}개, 탈락 {len(all_rejected)}개", indent=1)
-
-    if all_passed:
-        avg_faith = sum(q['scores']['faithfulness'] for q in all_passed) / len(all_passed)
-        avg_relevancy = sum(q['scores']['answer_relevancy'] for q in all_passed) / len(all_passed)
-        logger.log(f"평균: Faithfulness {avg_faith:.2f}, Relevancy {avg_relevancy:.2f}", indent=1)
-
+    logger.log(f"결과: DB 저장 {total_saved}개, 탈락 {len(all_rejected)}개", indent=1)
     logger.log(f"비용: {cost.summary()}", indent=1)
     logger.log(f"소요시간: {logger.elapsed()}", indent=1)
 
