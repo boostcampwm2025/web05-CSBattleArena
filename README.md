@@ -1,7 +1,7 @@
 <div align="center">
   <img width="1392" height="768" alt="Gemini Generated Image from Pixelcut" src="https://github.com/user-attachments/assets/6e46624b-d571-4ce3-88df-9cd4336113a3" />
 
-# CS 아레나
+# CS Arena
 
 **CS 학습을 게임처럼, 실력은 면접처럼!** ⚔️
 
@@ -37,7 +37,7 @@ AI 기반 학습 도구가 늘어나고 있지만, 환각(Hallucination) 현상�
 ## 🎯 Core Solution & Values
 
 <div align="center">
-  <strong>CS 배틀 아레나는 실시간 1:1 대결과 RAG 기반 문제 출제를 결합하여<br/>학습 동기와 신뢰도를 동시에 해결합니다.</strong>
+  <strong>CS Arena는 실시간 1:1 대결과 RAG 기반 문제 출제를 결합하여<br/>학습 동기와 신뢰도를 동시에 해결합니다.</strong>
 
   <br />
   <br />
@@ -190,7 +190,7 @@ pnpm dev:local
 
 <div align="center">
 
-  ### CS 배틀 아레나와 함께 즐겁게 CS를 마스터하세요! 🎮
+  ### CS Arena와 함께 즐겁게 CS를 마스터하세요! 🎮
 
   질문이나 피드백은 언제나 환영합니다.
 
