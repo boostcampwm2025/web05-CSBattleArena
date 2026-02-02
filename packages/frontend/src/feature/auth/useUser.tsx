@@ -1,29 +1,23 @@
 import { createContext, useContext } from 'react';
 import { useState } from 'react';
 
-type UserData = {
-  userId: string;
-  nickname: string;
-  tier: string;
-  expPoint: number;
-  isSentFeedback: boolean;
-} | null;
+import { UserData } from '@/shared/type';
 
 type UserAPI = {
   // 사용자 데이터
-  userData: UserData;
-  setUserData: React.Dispatch<React.SetStateAction<UserData>>;
+  userData: UserData | undefined;
+  setUserData: React.Dispatch<React.SetStateAction<UserData | undefined>>;
 
   // Access Token
-  accessToken: string | null;
-  setAccessToken: React.Dispatch<React.SetStateAction<string | null>>;
+  accessToken: string | undefined;
+  setAccessToken: React.Dispatch<React.SetStateAction<string | undefined>>;
 };
 
 const UserCtx = createContext<UserAPI | null>(null);
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  const [userData, setUserData] = useState<UserData | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [userData, setUserData] = useState<UserData | undefined>(undefined);
+  const [accessToken, setAccessToken] = useState<string | undefined>(undefined);
 
   return (
     <UserCtx.Provider value={{ userData, setUserData, accessToken, setAccessToken }}>

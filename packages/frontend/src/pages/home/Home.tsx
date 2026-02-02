@@ -1,6 +1,7 @@
 import { useHome } from './hooks/useHome';
-
 import LoginModal from './components/LoginModal';
+import TierBadge from '@/shared/TierBadge';
+import ProfileAvatar from '@/shared/ProfileAvatar';
 
 export default function Home() {
   const {
@@ -62,9 +63,12 @@ export default function Home() {
             <div className="flex flex-col items-stretch gap-6 border-4 border-cyan-400 bg-gradient-to-r from-slate-800/90 to-slate-900/90 p-4">
               {/* User Info */}
               <div className="flex gap-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-xl border-4 border-white bg-gradient-to-br from-cyan-400 to-purple-500">
-                  <i className="ri-user-star-line text-4xl text-white" />
-                </div>
+                <ProfileAvatar
+                  profileImage={userData.profileImage}
+                  nickname={userData.nickname}
+                  size="lg"
+                  borderStyle="white"
+                />
                 <div className="flex flex-col justify-between p-1">
                   <h2
                     className="text-2xl font-bold text-cyan-300"
@@ -73,18 +77,12 @@ export default function Home() {
                     {userData.nickname}
                   </h2>
                   <div className="flex gap-4">
-                    <span
-                      className="text-base font-bold text-amber-400"
-                      style={{ fontFamily: 'Orbitron' }}
-                    >
-                      <i className="ri-vip-crown-line mr-1" />
-                      {userData.tier}
-                    </span>
+                    <TierBadge tier={userData.tier} className="text-base" />
                     <span
                       className="text-base font-bold text-pink-400"
                       style={{ fontFamily: 'Orbitron' }}
                     >
-                      LV.42
+                      LV.{userData.level}
                     </span>
                   </div>
                 </div>
@@ -97,19 +95,23 @@ export default function Home() {
                   style={{ fontFamily: 'Orbitron' }}
                 >
                   <span>EXP</span>
-                  <span>{userData.expPoint} / 10000</span>
+                  <span>
+                    {userData.remainedExpPoint} / {userData.needExpPoint}
+                  </span>
                 </div>
 
                 <div className="relative h-5 w-full overflow-hidden border-2 border-cyan-500 bg-slate-700">
                   <div
                     className="h-full bg-gradient-to-r from-cyan-400 to-purple-500 transition-all duration-500"
-                    style={{ width: `${userData.expPoint / 100}%` }}
+                    style={{
+                      width: `${(userData.remainedExpPoint / userData.needExpPoint) * 100}%`,
+                    }}
                   />
                   <div
                     className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white"
                     style={{ fontFamily: 'Orbitron' }}
                   >
-                    {Math.round(userData.expPoint / 100)}%
+                    {Math.round((userData.remainedExpPoint / userData.needExpPoint) * 100)}%
                   </div>
                 </div>
               </div>

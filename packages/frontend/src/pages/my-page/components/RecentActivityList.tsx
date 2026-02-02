@@ -8,13 +8,27 @@ const getMatchConfig = (item: MatchHistoryItem) => {
   if (item.type === 'multi') {
     const match = item.match as MultiMatch;
 
-    if (match.result === 'win') {
+    const isWin = match.result === 'win';
+    const scoreDisplay = `${match.myScore} : ${match.opponentScore}`;
+    const pointDisplay =
+      match.tierPointChange > 0 ? `+${match.tierPointChange}` : `${match.tierPointChange}`;
+
+    if (isWin) {
       return {
         icon: 'ri-sword-line',
         color: '#4ade80',
         bgColor: 'rgba(74, 222, 128, 0.1)',
         title: `Victory vs ${match.opponent.nickname}`,
-        description: `+${match.tierPointChange}`,
+        description: `Score ${scoreDisplay} (${pointDisplay} RP)`,
+        date: match.playedAt,
+      };
+    } else if (match.result === 'draw') {
+      return {
+        icon: 'ri-subtract-line',
+        color: '#facc15',
+        bgColor: 'rgba(250, 204, 21, 0.1)',
+        title: `Draw vs ${match.opponent.nickname}`,
+        description: `Score ${scoreDisplay} (${pointDisplay} RP)`,
         date: match.playedAt,
       };
     } else {
@@ -23,7 +37,7 @@ const getMatchConfig = (item: MatchHistoryItem) => {
         color: '#f87171',
         bgColor: 'rgba(248, 113, 113, 0.1)',
         title: `Defeat vs ${match.opponent.nickname}`,
-        description: `${match.tierPointChange}`,
+        description: `Score ${scoreDisplay} (${pointDisplay} RP)`,
         date: match.playedAt,
       };
     }
@@ -52,7 +66,7 @@ export function RecentActivityList({ matchHistory }: RecentActivityListProps) {
       </div>
 
       {/* Activity List */}
-      <div className="flex-1 overflow-hidden p-3">
+      <div className="scrollbar-hide flex-1 overflow-y-auto p-3">
         {matchHistory.length === 0 ? (
           <div className="flex h-full items-center justify-center">
             <p className="text-sm text-gray-400" style={{ fontFamily: 'Orbitron' }}>
@@ -100,12 +114,12 @@ export function RecentActivityList({ matchHistory }: RecentActivityListProps) {
                     </p>
                   </div>
 
-                  {/* Date */}
                   <div
                     className="flex-shrink-0 text-[10px] text-cyan-400"
                     style={{ fontFamily: 'Orbitron' }}
                   >
-                    {new Date(config.date).toLocaleDateString('en-US', {
+                    {new Date(config.date).toLocaleDateString('ko-KR', {
+                      timeZone: 'Asia/Seoul',
                       month: '2-digit',
                       day: '2-digit',
                     })}

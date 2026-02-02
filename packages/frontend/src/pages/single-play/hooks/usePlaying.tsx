@@ -3,13 +3,14 @@ import { useCallback, useRef, useState } from 'react';
 import { submitAnswer } from '@/lib/api/single-play';
 
 import { useUser } from '@/feature/auth/useUser';
-import { usePhase, useQuestion } from '@/feature/single-play/useRound';
+import { useMatchId, usePhase, useQuestion } from '@/feature/single-play/useRound';
 
 export function usePlaying() {
-  const { accessToken } = useUser();
+  const { accessToken, setUserData } = useUser();
 
   const { phase, setPhase } = usePhase();
   const { curQuestion } = useQuestion();
+  const { matchId } = useMatchId();
 
   const [answer, setAnswer] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -32,14 +33,43 @@ export function usePlaying() {
     const controller = new AbortController();
     submitControllerRef.current = controller;
 
+    if (matchId === null) {
+      // TODO: 공통 에러 모달 - matchId가 없으면 세션이 시작되지 않은 것
+      console.error('matchId가 없습니다. 세션을 다시 시작해주세요.');
+      setPhase({ kind: 'preparing' });
+
+      return;
+    }
+
+    if (!curQuestion?.id) {
+      // TODO: 공통 에러 모달 - 문제가 없으면 문제를 다시 불러와야 함
+      console.error('문제 정보가 없습니다. 카테고리를 다시 선택해주세요.');
+      setPhase({ kind: 'preparing' });
+
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const data = await submitAnswer(
         accessToken,
-        { questionId: Number(curQuestion?.id), answer: trimmed },
+        { matchId, questionId: curQuestion.id, answer: trimmed },
         controller.signal,
       );
+
+      setUserData((prev) => {
+        if (!prev) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          level: data.level,
+          needExpPoint: data.needExpPoint,
+          remainedExpPoint: data.remainedExpPoint,
+        };
+      });
 
       setPhase({
         kind: 'result',
@@ -60,7 +90,7 @@ export function usePlaying() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [accessToken, answer, phase.kind, setPhase, curQuestion]);
+  }, [accessToken, setUserData, answer, phase.kind, setPhase, curQuestion, matchId]);
 
   return {
     answer,

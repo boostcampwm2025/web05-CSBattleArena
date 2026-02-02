@@ -68,15 +68,21 @@ export class GameGateway implements OnGatewayDisconnect, OnGatewayInit {
         return { ok: false, error: 'Answer already submitted' };
       }
 
-      // 답안 제출
-      this.sessionManager.submitAnswer(roomId, userId, data.answer);
-
-      // 상대에게 제출 알림
+      // 상대 플레이어 ID와 소켓 ID 확인
+      const opponentId =
+        userId === gameSession.player1Id ? gameSession.player2Id : gameSession.player1Id;
       const opponentSocketId =
         userId === gameSession.player1Id
           ? gameSession.player2SocketId
           : gameSession.player1SocketId;
 
+      // 답안 제출 전에 상대가 이미 제출했는지 확인
+      const opponentAlreadySubmitted = this.sessionManager.hasPlayerSubmitted(roomId, opponentId);
+
+      // 답안 제출
+      this.sessionManager.submitAnswer(roomId, userId, data.answer);
+
+      // 상대에게 제출 알림
       this.server.to(opponentSocketId).emit('opponent:submitted', {});
 
       // 양쪽 모두 제출했으면 그레이딩 시작
@@ -86,7 +92,9 @@ export class GameGateway implements OnGatewayDisconnect, OnGatewayInit {
         await this.roundProgression.phaseGrading(roomId);
       }
 
-      return { ok: true };
+      const response = { ok: true, opponentSubmitted: opponentAlreadySubmitted };
+
+      return response;
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
@@ -122,7 +130,34 @@ export class GameGateway implements OnGatewayDisconnect, OnGatewayInit {
         reason: 'disconnect',
       });
 
+      // DB 저장 (연결 끊김 기록) - 상대방이 승자
+      let eloChanges: { player1Change: number; player2Change: number } | null = null;
+
+      try {
+        const finalResult = {
+          winnerId: opponentId,
+          scores: {
+            [gameSession.player1Id]: gameSession.player1Score,
+            [gameSession.player2Id]: gameSession.player2Score,
+          },
+          isDraw: false,
+        };
+        eloChanges = await this.matchPersistence.saveMatchToDatabase(
+          disconnectInfo.roomId,
+          finalResult,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to save match after disconnect: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        );
+      }
+
       // 상대방에게 match:end 이벤트 전송
+      const opponentTierPointChange =
+        opponentId === gameSession.player1Id
+          ? (eloChanges?.player1Change ?? 0)
+          : (eloChanges?.player2Change ?? 0);
+
       this.server.to(opponentSocketId).emit('match:end', {
         isWin: true,
         finalScores: {
@@ -135,24 +170,8 @@ export class GameGateway implements OnGatewayDisconnect, OnGatewayInit {
               ? gameSession.player1Score
               : gameSession.player2Score,
         },
+        tierPointChange: opponentTierPointChange,
       });
-
-      // DB 저장 (연결 끊김 기록) - 상대방이 승자
-      try {
-        const finalResult = {
-          winnerId: opponentId,
-          scores: {
-            [gameSession.player1Id]: gameSession.player1Score,
-            [gameSession.player2Id]: gameSession.player2Score,
-          },
-          isDraw: false,
-        };
-        await this.matchPersistence.saveMatchToDatabase(disconnectInfo.roomId, finalResult);
-      } catch (error) {
-        this.logger.error(
-          `Failed to save match after disconnect: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        );
-      }
 
       // 세션 정리
       this.sessionManager.deleteGameSession(disconnectInfo.roomId);

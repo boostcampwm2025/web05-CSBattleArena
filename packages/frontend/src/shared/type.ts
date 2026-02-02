@@ -1,8 +1,12 @@
 export type UserData = {
   userId: string;
   nickname: string;
+  profileImage: string | null;
   tier: string;
-  expPoint: number;
+  tierPoint: number;
+  level: number;
+  needExpPoint: number;
+  remainedExpPoint: number;
   isSentFeedback: boolean;
 };
 
@@ -55,7 +59,7 @@ export type Category = {
 // MyPage Types - Based on API Specification
 export type UserProfile = {
   nickname: string;
-  profileImage: string;
+  profileImage: string | null;
   email: string;
   createdAt: string;
 };
@@ -67,8 +71,8 @@ export type UserRank = {
 
 export type UserLevel = {
   level: number;
-  expForCurrentLevel: number;
-  expForNextLevel: number;
+  needExpPoint: number;
+  remainedExpPoint: number;
 };
 
 export type MatchStats = {
@@ -90,7 +94,7 @@ export type ProblemStats = {
 export type MyPageResponse = {
   profile: UserProfile;
   rank: UserRank;
-  level: UserLevel;
+  levelInfo: UserLevel;
   matchStats: MatchStats;
   problemStats: ProblemStats;
 };
@@ -107,12 +111,12 @@ export type TierHistoryResponse = {
 
 export type Opponent = {
   nickname: string;
-  profileImage: string;
+  profileImage: string | null;
 };
 
 export type MultiMatch = {
   opponent: Opponent;
-  result: 'win' | 'lose';
+  result: 'win' | 'lose' | 'draw';
   myScore: number;
   opponentScore: number;
   tierPointChange: number;

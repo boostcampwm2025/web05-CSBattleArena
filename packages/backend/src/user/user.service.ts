@@ -3,8 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, UserStatistics } from './entity';
 import { UserProblemBank } from '../problem-bank/entity';
-import { UserTierHistory } from '../tier/entity/user-tier-history.entity';
-import { Match } from '../match/entity/match.entity';
+import { UserTierHistory } from '../tier/entity';
+import { Match } from '../match/entity';
 import {
   MatchStatsDto,
   MyPageResponseDto,
@@ -14,7 +14,7 @@ import {
 } from './dto/mypage-response.dto';
 import { TierHistoryResponseDto } from './dto/tier-history-response.dto';
 import { MatchHistoryItemDto, MatchHistoryResponseDto } from './dto/match-history-response.dto';
-import { calculateLevel } from '../common/utils/level.util';
+import { calcLevel } from '../common/utils/level.util';
 import { calculateTier } from '../common/utils/tier.util';
 import { ProblemStatsRaw } from './interfaces';
 
@@ -47,19 +47,14 @@ export class UserService {
     const expPoint = stats?.expPoint ?? 0;
 
     const rank = this.buildRank(tierPoint);
-    const levelInfo = calculateLevel(expPoint);
-    const level = {
-      level: levelInfo.level,
-      expForCurrentLevel: levelInfo.expForCurrentLevel,
-      expForNextLevel: levelInfo.expForNextLevel,
-    };
+    const { level, needExpPoint, remainedExpPoint } = calcLevel(expPoint);
     const matchStats = this.buildMatchStats(stats);
     const problemStats = await this.buildProblemStats(userId);
 
     return {
       profile,
       rank,
-      level,
+      levelInfo: { level, needExpPoint, remainedExpPoint },
       matchStats,
       problemStats,
     };
@@ -94,6 +89,11 @@ export class UserService {
         'rounds.question.categoryQuestions',
         'rounds.question.categoryQuestions.category',
         'rounds.question.categoryQuestions.category.parent',
+        'problemBanks',
+        'problemBanks.question',
+        'problemBanks.question.categoryQuestions',
+        'problemBanks.question.categoryQuestions.category',
+        'problemBanks.question.categoryQuestions.category.parent',
       ],
       order: { createdAt: 'DESC' },
       take: 10,
@@ -141,7 +141,7 @@ export class UserService {
   }
 
   private buildSingleMatchHistory(match: Match, userId: number): MatchHistoryItemDto {
-    const firstQuestion = match.rounds?.[0]?.question;
+    const firstQuestion = match.rounds?.[0]?.question || match.problemBanks?.[0]?.question;
     const category = firstQuestion?.categoryQuestions?.[0]?.category;
     const categoryName = category?.parent?.name ?? category?.name ?? 'Unknown';
 

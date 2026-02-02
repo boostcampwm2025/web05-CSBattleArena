@@ -1,4 +1,6 @@
 import { UserLevel, UserProfile, UserRank } from '@/shared/type';
+import ProfileAvatar from '@/shared/ProfileAvatar';
+import TierBadge from '@/shared/TierBadge';
 
 type ProfileSectionProps = {
   profile: UserProfile;
@@ -7,10 +9,6 @@ type ProfileSectionProps = {
 };
 
 export function ProfileSection({ profile, rank, level }: ProfileSectionProps) {
-  // 백엔드: expForCurrentLevel = 현재 레벨에서 모은 exp (0~99)
-  //         expForNextLevel = 남은 exp
-  // 프론트: 100 exp마다 레벨업이므로 총 100으로 계산
-  const expPercentage = level.expForCurrentLevel;
   const memberSince = new Date(profile.createdAt).toLocaleDateString('en-US', {
     year: 'numeric',
     month: '2-digit',
@@ -21,11 +19,7 @@ export function ProfileSection({ profile, rank, level }: ProfileSectionProps) {
     <div className="flex h-full items-center gap-4 border-2 border-cyan-400 bg-gradient-to-r from-slate-800/90 to-slate-900/90 p-3">
       {/* User Info */}
       <div className="flex gap-3">
-        <img
-          src={profile.profileImage}
-          alt={profile.nickname}
-          className="h-14 w-14 flex-shrink-0 rounded-lg border-2 border-cyan-400 object-cover"
-        />
+        <ProfileAvatar profileImage={profile.profileImage} nickname={profile.nickname} size="md" />
         <div className="flex flex-col justify-center gap-1">
           <div className="flex items-baseline gap-2">
             <h2 className="text-xl font-bold text-cyan-300" style={{ fontFamily: 'Orbitron' }}>
@@ -36,10 +30,7 @@ export function ProfileSection({ profile, rank, level }: ProfileSectionProps) {
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm font-bold text-amber-400" style={{ fontFamily: 'Orbitron' }}>
-              <i className="ri-vip-crown-line mr-1" />
-              {rank.tier}
-            </span>
+            <TierBadge tier={rank.tier} className="text-sm" />
             <span className="text-sm font-bold text-yellow-300" style={{ fontFamily: 'Orbitron' }}>
               ⭐ {rank.tierPoint.toLocaleString()}
             </span>
@@ -64,19 +55,21 @@ export function ProfileSection({ profile, rank, level }: ProfileSectionProps) {
           style={{ fontFamily: 'Orbitron' }}
         >
           <span className="font-bold">EXP TO NEXT LEVEL</span>
-          <span>{level.expForCurrentLevel} / 100</span>
+          <span>
+            {level.remainedExpPoint} / {level.needExpPoint}
+          </span>
         </div>
 
         <div className="relative h-4 w-full overflow-hidden border border-cyan-500 bg-slate-700">
           <div
             className="h-full bg-gradient-to-r from-cyan-400 to-purple-500 transition-all duration-500"
-            style={{ width: `${expPercentage}%` }}
+            style={{ width: `${Math.round((level.remainedExpPoint / level.needExpPoint) * 100)}%` }}
           />
           <div
             className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white"
             style={{ fontFamily: 'Orbitron' }}
           >
-            {Math.round(expPercentage)}%
+            {Math.round((level.remainedExpPoint / level.needExpPoint) * 100)}%
           </div>
         </div>
       </div>

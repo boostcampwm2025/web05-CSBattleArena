@@ -12,6 +12,7 @@ import { Question } from '../quiz/quiz.types';
 import { mapDifficulty, SCORE_MAP } from '../quiz/quiz.constants';
 import { Match } from '../match/entity';
 import { UserProblemBank } from '../problem-bank/entity';
+import { calcLevel } from '../common/utils/level.util';
 
 @Injectable()
 export class SinglePlayService {
@@ -25,6 +26,27 @@ export class SinglePlayService {
     private readonly connection: DataSource,
     private readonly quizService: QuizService,
   ) {}
+
+  /**
+   * 싱글플레이 세션 시작
+   */
+  async startSession(userId: string): Promise<number> {
+    try {
+      const match = await this.connection.manager.save(Match, {
+        player1Id: this.parseUserId(userId),
+        player2Id: null,
+        winnerId: null,
+        matchType: 'single',
+      });
+
+      this.logger.log(`Single play session started for user ${userId}, matchId: ${match.id}`);
+
+      return match.id;
+    } catch (error) {
+      this.logger.error(`Failed to start session: ${(error as Error).message}`);
+      throw new InternalServerErrorException('세션 시작 중 오류가 발생했습니다.');
+    }
+  }
 
   /**
    * 대분류 카테고리 목록 조회
@@ -60,7 +82,16 @@ export class SinglePlayService {
         throw new NotFoundException('해당 카테고리에 문제가 없습니다.');
       }
 
-      return questions[0];
+      const question = questions[0];
+
+      // 문제 사용 횟수 증가 (비동기, 에러 무시)
+      this.quizService.incrementUsageCount(question.id).catch((err: Error) => {
+        this.logger.warn(
+          `Failed to increment usage count for question ${question.id}: ${err.message}`,
+        );
+      });
+
+      return question;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -92,30 +123,45 @@ export class SinglePlayService {
    */
   async submitAnswer(
     userId: string,
+    matchId: number,
     questionId: number,
     answer: string,
   ): Promise<{
-    score: number;
     grade: { submittedAnswer: string; isCorrect: boolean; aiFeedback: string };
+    level: number;
+    needExpPoint: number;
+    remainedExpPoint: number;
   }> {
     try {
       const question = await this.findQuestionById(questionId);
       const grade = await this.gradeAnswer(question, answer);
       const finalScore = this.calculateFinalScore(question, grade);
 
-      await this.saveAnswerResult(userId, questionId, question, answer, grade);
-
-      this.logger.log(
-        `Answer submitted for user ${userId}, question ${questionId}, score: ${finalScore}`,
+      const curExp = await this.saveAnswerResult(
+        userId,
+        matchId,
+        questionId,
+        question,
+        answer,
+        grade,
+        finalScore,
       );
 
+      this.logger.log(
+        `Answer submitted for user ${userId}, matchId ${matchId}, question ${questionId}, score: ${finalScore}`,
+      );
+
+      const { level, needExpPoint, remainedExpPoint } = calcLevel(curExp);
+
       return {
-        score: finalScore,
         grade: {
           submittedAnswer: answer,
           isCorrect: grade.isCorrect,
           aiFeedback: grade.feedback,
         },
+        level,
+        needExpPoint,
+        remainedExpPoint,
       };
     } catch (error) {
       if (error instanceof NotFoundException) {
@@ -181,22 +227,39 @@ export class SinglePlayService {
   }
 
   /**
-   * 답안 결과 DB 저장 (트랜잭션)
+   * 답안 결과 DB 저장
    */
   private async saveAnswerResult(
     userId: string,
+    matchId: number,
     questionId: number,
     question: QuestionEntity,
     answer: string,
     grade: { isCorrect: boolean; score: number; feedback: string },
-  ): Promise<void> {
-    await this.connection.transaction(async (manager) => {
-      const match = await manager.save(Match, {
-        player1Id: this.parseUserId(userId),
-        player2Id: null,
-        winnerId: null,
-        matchType: 'single',
+    finalScore: number,
+  ): Promise<number> {
+    return await this.connection.transaction(async (manager) => {
+      const uid = this.parseUserId(userId);
+
+      // matchId, 소유자, matchType 검증
+      const match = await manager.findOne(Match, {
+        where: { id: matchId },
       });
+
+      if (!match) {
+        throw new NotFoundException('존재하지 않는 세션입니다.');
+      }
+
+      // TypeORM이 bigint를 string으로 반환하므로 Number로 변환하여 비교
+      const matchOwnerId = Number(match.player1Id);
+
+      if (matchOwnerId !== uid) {
+        throw new NotFoundException('본인의 세션이 아닙니다.');
+      }
+
+      if (match.matchType !== 'single') {
+        throw new NotFoundException('싱글플레이 세션이 아닙니다.');
+      }
 
       const answerStatus = this.quizService.determineAnswerStatus(
         question.questionType,
@@ -205,13 +268,28 @@ export class SinglePlayService {
       );
 
       await manager.save(UserProblemBank, {
-        userId: this.parseUserId(userId),
+        userId: uid,
         questionId,
-        matchId: match.id,
+        matchId,
         userAnswer: answer,
         answerStatus,
         aiFeedback: grade.feedback,
       });
+
+      const result: [{ exp_point: number }[], number] = await manager.query(
+        `
+        UPDATE user_statistics
+        SET exp_point = COALESCE(exp_point, 0) + $1
+        WHERE user_id = $2
+        RETURNING exp_point
+        `,
+        [finalScore, uid],
+      );
+
+      const rows = result[0];
+      const curExp = rows[0]?.exp_point ?? 0;
+
+      return curExp;
     });
   }
 
@@ -219,7 +297,7 @@ export class SinglePlayService {
     const parsed = parseInt(userId, 10);
 
     if (isNaN(parsed)) {
-      throw new Error(`유효하지 않은 userId: ${userId}`);
+      throw new NotFoundException(`유효하지 않은 userId: ${userId}`);
     }
 
     return parsed;

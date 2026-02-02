@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { UserData } from '@/shared/type';
 import { useScene } from '@/feature/useScene';
 import { useUser } from '@/feature/auth/useUser';
-import { refreshAccessToken } from '@/feature/auth/auth.api';
+import { fetchUserData, handleOAuthCallback, refreshAccessToken } from '@/feature/auth/auth.api';
 
 import { MatchProvider } from '@/feature/matching/useMatch';
 
@@ -21,53 +21,57 @@ export default function App() {
 
   // 앱 마운트 시 OAuth 처리 및 Silent Refresh
   useEffect(() => {
+    const controller = new AbortController();
+
     const initAuth = async () => {
       // 1. URL 해시에 토큰이 있는 경우 (OAuth 콜백 첫 진입)
-      const hash = window.location.hash;
+      try {
+        const data = handleOAuthCallback();
 
-      if (hash.includes('access_token')) {
-        const params = new URLSearchParams(hash.substring(1));
-        const accessToken = params.get('access_token');
-        const userJson = params.get('user');
-
-        if (accessToken) {
-          setAccessToken(accessToken);
-
-          if (userJson) {
-            try {
-              const user = JSON.parse(decodeURIComponent(userJson)) as UserData;
-              setUserData(user);
-            } catch (err) {
-              console.error('Failed to parse user data:', err);
-            }
-          }
-
-          // URL 해시 제거 및 홈으로 리다이렉트
-          window.history.replaceState(null, '', window.location.pathname);
-
-          // 씬 전환이 필요하다면 여기서 처리 (보통 홈으로 유지하거나 현재 씬 유지)
-          return;
+        if (!data.ok) {
+          throw new Error(data.err);
         }
+
+        const { accessToken, userData } = data;
+
+        setAccessToken(accessToken);
+        const mappedUserData: UserData = {
+          ...userData,
+          profileImage: userData.userProfile,
+        };
+        setUserData(mappedUserData);
+
+        window.history.replaceState(null, '', '/');
+
+        return;
+      } catch (err) {
+        console.error(`Failed to login with OAuth. ${err}`);
       }
 
       // 2. 토큰은 없지만 새로고침된 경우 (Silent Refresh)
       try {
-        const token = await refreshAccessToken(new AbortController().signal);
+        const token = await refreshAccessToken(controller.signal);
 
         if (token) {
           setAccessToken(token);
 
-          // 유저 정보를 가져오는 추가 API 호출이 필요할 수 있음
-          // 현재는 /api/auth/me 등을 호출하여 userData 복구
-          const response = await fetch(`/api/auth/me`, {
-            headers: { Authorization: `Bearer ${token}` },
-            credentials: 'include',
-          });
+          const userData = await fetchUserData(token, controller.signal);
 
-          if (response.ok) {
-            const user = (await response.json()) as UserData;
-            setUserData(user);
-          }
+          setUserData((prev) => {
+            if (!prev || !userData) {
+              return prev;
+            }
+
+            return {
+              ...prev,
+              nickname: userData.profile.nickname,
+              profileImage: userData.profile.profileImage,
+              tier: userData.rank.tier,
+              level: userData.levelInfo.level,
+              needExpPoint: userData.levelInfo.needExpPoint,
+              remainedExpPoint: userData.levelInfo.remainedExpPoint,
+            };
+          });
         }
       } catch (err) {
         console.error('Silent refresh failed:', err);
@@ -76,6 +80,10 @@ export default function App() {
     };
 
     void initAuth();
+
+    return () => {
+      controller.abort();
+    };
   }, [setAccessToken, setUserData]);
 
   switch (scene) {

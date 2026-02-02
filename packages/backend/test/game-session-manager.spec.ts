@@ -1,5 +1,5 @@
 import { GameSessionManager } from '../src/game/game-session-manager';
-import { UserInfo } from '../src/game/interfaces/user.interface';
+import { UserInfo } from '../src/user/interfaces';
 import { Question as QuestionEntity } from '../src/quiz/entity';
 
 describe('GameSessionManager - Game Session Management', () => {
@@ -7,13 +7,17 @@ describe('GameSessionManager - Game Session Management', () => {
 
   const mockUserInfo1: UserInfo = {
     nickname: 'Player1',
+    profileImage: null,
     tier: 'gold',
+    tierPoint: 1500,
     exp_point: 1500,
   };
 
   const mockUserInfo2: UserInfo = {
     nickname: 'Player2',
+    profileImage: null,
     tier: 'silver',
+    tierPoint: 1200,
     exp_point: 1200,
   };
 

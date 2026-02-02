@@ -1,6 +1,8 @@
 export type UserInfo = {
   nickname: string;
+  profileImage: string | null;
   tier: string;
+  tierPoint: number;
   expPoint: number;
 };
 
@@ -10,7 +12,15 @@ export type MatchDequeueReq = { sessionId: string };
 
 export type MatchDequeueRes = { ok: true } | { ok: false; error: string };
 
-export type MatchFound = { opponent: { nickname: string; tier: string; expPoint: number } };
+export type MatchFound = {
+  opponent: {
+    nickname: string;
+    profileImage: string | null;
+    tier: string;
+    tierPoint: number;
+    expPoint: number;
+  };
+};
 
 export type RoundReady = {
   durationSec: number;
@@ -44,6 +54,12 @@ export type RoundTick = { remainedSec: number };
 
 export type SubmitAnswerReq = { answer: string };
 
-export type SubmitAnswerRes = { ok: true } | { ok: false; error: string };
+export type SubmitAnswerRes =
+  | { ok: true; opponentSubmitted: boolean }
+  | { ok: false; error: string };
 
-export type MatchEnd = { isWin: boolean; finalScores: { my: number; opponent: number } };
+export type MatchEnd = {
+  isWin: boolean;
+  finalScores: { my: number; opponent: number };
+  tierPointChange: number;
+};
