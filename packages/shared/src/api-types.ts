@@ -1,7 +1,13 @@
-import { Profile, TierInfo, LevelInfo, MatchStatistics, SolvedStatistics } from "./constant";
-import { Category, Question } from "./constant";
-import { SubmissionResult } from "./constant";
-import { MatchType } from "./constant";
+import {
+  LevelInfo,
+  MatchStatistics,
+  Profile,
+  SolvedStatistics,
+  TierInfo,
+} from "./constant/user-info.type";
+import { Question } from "./constant/question.type";
+import { Category } from "./constant/category.type";
+import { MatchType, MySubmission, Solution } from "./constant/game.type";
 
 // 요청 객체는 interface로, 응답 객체는 type으로 선언
 
@@ -18,7 +24,9 @@ export interface LoginDevReq {
 // GET /api/auth/github/callback
 
 // GET /api/auth/refresh
-export type RefreshTokenRes = { ok: true; accessToken: string } | { ok: false; message: string };
+export type RefreshTokenRes =
+  | { ok: true; accessToken: string }
+  | { ok: false; message: string };
 
 // GET /api/auth/logout
 export type LogoutRes = { ok: true } | { ok: false; message: string };
@@ -54,16 +62,22 @@ export type FetchUserMatchHistoryRes = {
 // ** GET /api/quiz/categories 엔드포인트와 중복됨. **
 // ** Category 타입은 GET /api/quiz/categories에서 사용한 응답 객체가 옳바르다고 판단하여 해당 객체로 통일. **
 // ** 단, parentId는 불필요하다고 판단하여 parent를 nullable 값으로 변경하고 parentId 제거. **
-export type FetchCategoriesRes = { ok: true; categories: Category[] } | { ok: false; message: string };
+export type FetchCategoriesRes =
+  | { ok: true; categories: Category[] }
+  | { ok: false; message: string };
 
 // POST /api/singleplay/start
 // ** 엔드포인트 이름이 새 세션을 가져온다라는 느낌으로 수정하는 것이 좋아보임. **
 // ** 그에 따라 메소드가 POST가 아닌 GET으로 수정할 필요가 있어보임. **
-export type StartSinglePlayRes = { ok: true; matchId: number } | { ok: false; message: string };
+export type StartSinglePlayRes =
+  | { ok: true; matchId: number }
+  | { ok: false; message: string };
 
 // GET /api/singleplay/question?categoryId=
 // ** categoryIds로 이름을 바꾸는게 좋을 듯 **
-export type FetchQuestionRes = { ok: true; question: Question } | { ok: false; message: string };
+export type FetchQuestionRes =
+  | { ok: true; question: Question }
+  | { ok: false; message: string };
 
 // POST /api/singleplay/submit
 export interface SubmitAnswerReq {
@@ -74,7 +88,11 @@ export interface SubmitAnswerReq {
 export type SubmitAnswerRes =
   | {
       ok: true;
-      grade: { submittedAnswer: string; isCorrect: boolean; aiFeedback: string };
+      grade: {
+        submittedAnswer: string;
+        isCorrect: boolean;
+        aiFeedback: string;
+      };
       level: number;
       needExpPoint: number;
       remainedExpPoint: number;
@@ -104,7 +122,9 @@ export type FetchProblemBankRes =
   | { ok: false; message: string };
 
 // GET /api/problem-bank/statistics
-export type FetchSolvedStatisticsRes = { ok: true; statistics: SolvedStatistics } | { ok: false; message: string };
+export type FetchSolvedStatisticsRes =
+  | { ok: true; statistics: SolvedStatistics }
+  | { ok: false; message: string };
 
 // PATCH /api/problem-bank/{id}/bookmark
 export interface CheckBookmarkReq {

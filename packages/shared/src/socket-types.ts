@@ -3,9 +3,13 @@ import {
   OpponentProfile,
   OpponentTierInfo,
   TierInfo,
-} from "./constant";
-import { Question } from "./constant";
-import { MySubmission, OpponentSubmission, Solution } from "./constant";
+} from "./constant/user-info.type";
+import { Question } from "./constant/question.type";
+import {
+  MySubmission,
+  OpponentSubmission,
+  Solution,
+} from "./constant/game.type";
 
 // 클라이언트에서 서버로 보내는 요청 객체는 interface로, 이외의 모든 요청, 응답 객체는 type으로 선언
 // 네이밍 컨벤션은 요청 객체 마지막에 Dto, 응답 객체 마지막에 Ack 추가
