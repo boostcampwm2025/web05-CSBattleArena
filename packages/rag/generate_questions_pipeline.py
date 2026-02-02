@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from dataclasses import dataclass
 
-from category_loader import get_leaf_category_with_least_questions
+from category_loader import get_categories_for_generation, get_questions_to_generate, CategoryInfo
 from retriever import retrieve_chunks_with_reranker
 from question_generator import generate_questions
 from postprocessor import postprocess_questions
@@ -104,6 +104,81 @@ def evaluate_and_classify(
     return passed, rejected, usage
 
 
+def process_category(
+    category: CategoryInfo,
+    logger: Logger,
+    cost: CostTracker,
+) -> tuple[list[dict], list[dict], int]:
+    """단일 카테고리에 대해 문제 생성 및 저장
+
+    Returns:
+        (합격 문제 리스트, 탈락 문제 리스트, 저장된 문제 수)
+    """
+    # 1. 청크 검색 + Reranker
+    try:
+        retrieval = retrieve_chunks_with_reranker(category, top_k=10)
+        if not retrieval.chunks or retrieval.question_count == 0:
+            logger.log(f"관련 청크 없음 (스킵)", indent=1)
+            return [], [], 0
+        cost.hyde += retrieval.hyde_usage.total_cost
+        cost.reranker += retrieval.reranker_usage.total_cost
+        retrieval_cost = retrieval.hyde_usage.total_cost + retrieval.reranker_usage.total_cost
+        logger.log(f"청크 검색: {len(retrieval.chunks)}개, 목표 문제: {retrieval.question_count}개 ({retrieval_cost:.1f}원)", indent=1)
+    except Exception as e:
+        logger.log(f"청크 검색 실패: {e}", indent=1)
+        return [], [], 0
+
+    # 2. 문제 생성
+    context = QuestionGenerationContext(
+        category_id=category.id,
+        category_name=category.name,
+        category_path=category.path,
+        chunks=[c.content for c in retrieval.chunks],
+        chunk_ids=[c.id for c in retrieval.chunks],
+        target_question_count=retrieval.question_count,
+    )
+
+    try:
+        questions, gen_usage = generate_questions(context)
+        if not questions:
+            return [], [], 0
+        cost.generation += gen_usage.total_cost
+        logger.log(f"문제 생성: {len(questions)}개 ({gen_usage.total_cost:.1f}원)", indent=1)
+    except Exception as e:
+        logger.log(f"문제 생성 실패: {e}", indent=1)
+        return [], [], 0
+
+    # 3. 해설 후처리
+    questions_dict = [q.to_dict() for q in questions]
+    try:
+        questions_dict, pp_usage = postprocess_questions(questions_dict)
+        cost.postprocess += pp_usage.total_cost
+        logger.log(f"후처리: {len(questions_dict)}개 ({pp_usage.total_cost:.1f}원)", indent=1)
+    except Exception as e:
+        logger.log(f"후처리 실패 (원본 유지): {e}", indent=1)
+
+    # 4. 평가
+    try:
+        passed, rejected, eval_usage = evaluate_and_classify(questions_dict)
+        cost.evaluation += eval_usage.total_cost
+        logger.log(f"평가: 합격 {len(passed)}개, 탈락 {len(rejected)}개 ({eval_usage.total_cost:.1f}원)", indent=1)
+    except Exception as e:
+        logger.log(f"평가 실패: {e}", indent=1)
+        return [], [], 0
+
+    # 5. 합격 문제 DB 저장
+    saved_count = 0
+    if passed:
+        try:
+            saved_ids = save_questions_to_db(passed)
+            saved_count = len(saved_ids)
+            logger.log(f"DB 저장: {saved_count}개 (IDs: {saved_ids})", indent=1)
+        except Exception as e:
+            logger.log(f"DB 저장 실패: {e}", indent=1)
+
+    return passed, rejected, saved_count
+
+
 def run_pipeline():
     """메인 파이프라인 실행"""
     output_dir = get_output_directory()
@@ -113,106 +188,59 @@ def run_pipeline():
     logger = Logger(str(log_file))
     cost = CostTracker()
 
-    logger.log(f"파이프라인 시작 (목표: {config.TARGET_QUESTIONS}개)")
+    logger.log(f"파이프라인 시작 (unsolved 목표: {config.UNSOLVED_THRESHOLD}개)")
 
-    # 메인 루프
-    tried_categories = set()
+    # 1. 생성할 문제 수 결정
+    to_generate = get_questions_to_generate()
+    if to_generate == 0:
+        logger.log(f"unsolved가 이미 {config.UNSOLVED_THRESHOLD}개 이상. 종료.")
+        return
+
+    logger.log(f"생성할 문제 수: {to_generate}개")
+
+    # 2. 카테고리 목록 조회 (우선순위순)
+    try:
+        categories = get_categories_for_generation()
+        if not categories:
+            logger.log("카테고리가 없음. 종료.")
+            return
+        logger.log(f"대상 카테고리: {len(categories)}개")
+        for cat in categories[:5]:  # 상위 5개만 출력
+            logger.log(f"- {cat.name}: 총 {cat.question_count}개, unsolved {cat.unsolved_count}개", indent=1)
+        if len(categories) > 5:
+            logger.log(f"- ... 외 {len(categories) - 5}개", indent=1)
+    except Exception as e:
+        logger.log(f"카테고리 조회 실패: {e}")
+        return
+
+    # 3. 우선순위 큐 방식으로 문제 생성
     round_num = 1
     total_saved = 0
     all_rejected = []
 
-    while total_saved < config.TARGET_QUESTIONS and round_num <= MAX_ROUNDS:
-        # 1. 카테고리 선택
-        try:
-            category = get_leaf_category_with_least_questions()
-            if not category or category.id in tried_categories:
-                round_num += 1
-                continue
-            tried_categories.add(category.id)
-        except Exception as e:
-            logger.log(f"카테고리 선택 실패: {e}")
-            round_num += 1
-            continue
+    while total_saved < to_generate and categories and round_num <= MAX_ROUNDS:
+        # 가장 부족한 카테고리 선택 (unsolved 적은 순, 동일하면 question_count=0 우선)
+        categories.sort(key=lambda c: (c.unsolved_count, 0 if c.question_count == 0 else 1))
+        category = categories[0]
 
-        logger.log(f"Round {round_num}: {category.name} (ID:{category.id})")
+        logger.log(f"Round {round_num}: {category.name} (ID:{category.id}, unsolved:{category.unsolved_count})")
 
-        # 2. 청크 검색 + Reranker
-        try:
-            retrieval = retrieve_chunks_with_reranker(category, top_k=10)
-            if not retrieval.chunks or retrieval.question_count == 0:
-                logger.log(f"관련 청크 없음 (스킵)", indent=1)
-                round_num += 1
-                continue
-            cost.hyde += retrieval.hyde_usage.total_cost
-            cost.reranker += retrieval.reranker_usage.total_cost
-            retrieval_cost = retrieval.hyde_usage.total_cost + retrieval.reranker_usage.total_cost
-            logger.log(f"청크 검색: {len(retrieval.chunks)}개, 목표 문제: {retrieval.question_count}개 ({retrieval_cost:.1f}원)", indent=1)
-        except Exception as e:
-            logger.log(f"청크 검색 실패: {e}", indent=1)
-            round_num += 1
-            continue
+        # 문제 생성 처리
+        passed, rejected, saved_count = process_category(category, logger, cost)
 
-        # 3. 문제 생성
-        context = QuestionGenerationContext(
-            category_id=category.id,
-            category_name=category.name,
-            category_path=category.path,
-            chunks=[c.content for c in retrieval.chunks],
-            chunk_ids=[c.id for c in retrieval.chunks],
-            target_question_count=retrieval.question_count,
-        )
-
-        try:
-            questions, gen_usage = generate_questions(context)
-            if not questions:
-                round_num += 1
-                continue
-            cost.generation += gen_usage.total_cost
-            logger.log(f"문제 생성: {len(questions)}개 ({gen_usage.total_cost:.1f}원)", indent=1)
-        except Exception as e:
-            logger.log(f"문제 생성 실패: {e}", indent=1)
-            round_num += 1
-            continue
-
-        # 4. 해설 후처리
-        questions_dict = [q.to_dict() for q in questions]
-        try:
-            questions_dict, pp_usage = postprocess_questions(questions_dict)
-            cost.postprocess += pp_usage.total_cost
-            logger.log(f"후처리: {len(questions_dict)}개 ({pp_usage.total_cost:.1f}원)", indent=1)
-        except Exception as e:
-            logger.log(f"후처리 실패 (원본 유지): {e}", indent=1)
-
-        # 5. 평가
-        try:
-            passed, rejected, eval_usage = evaluate_and_classify(
-                questions_dict
-            )
-            cost.evaluation += eval_usage.total_cost
-            logger.log(f"평가: 합격 {len(passed)}개, 탈락 {len(rejected)}개 ({eval_usage.total_cost:.1f}원)", indent=1)
-        except Exception as e:
-            logger.log(f"평가 실패: {e}", indent=1)
-            round_num += 1
-            continue
-
-        # 6. 합격 문제 DB 저장
-        if passed:
-            try:
-                saved_ids = save_questions_to_db(passed)
-                total_saved += len(saved_ids)
-                logger.log(f"DB 저장: {len(saved_ids)}개 (IDs: {saved_ids})", indent=1)
-            except Exception as e:
-                logger.log(f"DB 저장 실패: {e}", indent=1)
-
-        # 7. 탈락 문제 파일 저장
+        # 결과 누적
+        total_saved += saved_count
         all_rejected.extend(rejected)
+
+        # 탈락 문제 파일 저장
         with open(rejected_file, 'w', encoding='utf-8') as f:
             json.dump(all_rejected, f, ensure_ascii=False, indent=2)
 
-        logger.log(f"누적: {total_saved}/{config.TARGET_QUESTIONS}", indent=1)
+        # unsolved 카운트 업데이트
+        category.unsolved_count += saved_count
+        category.question_count += saved_count
 
-        if total_saved >= config.TARGET_QUESTIONS:
-            break
+        logger.log(f"→ 누적: {total_saved}/{to_generate}", indent=1)
 
         round_num += 1
 
