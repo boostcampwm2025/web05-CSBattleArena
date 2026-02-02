@@ -90,7 +90,17 @@ export type SubmitAnswerRes =
 // ** http://localhost:3000/api/problem-bank?page=1&limit=9&categoryIds=6&categoryIds=1 **
 // ** 쉼표(,)를 구분자로 활용하여 쿼리 파라미터를 추가하도록 수정할 필요가 있음. (ex. categoryIds=1,6) **
 export type FetchProblemBankRes =
-  | { ok: true; items: { question: Question; submissionResult: SubmissionResult; isBookMarked: boolean }[]; totalPages: number; currentPage: number }
+  | {
+      ok: true;
+      items: {
+        question: Question;
+        submissionResult: SubmissionResult;
+        solution: Solution;
+        isBookMarked: boolean;
+      }[];
+      totalPages: number;
+      currentPage: number;
+    }
   | { ok: false; message: string };
 
 // GET /api/problem-bank/statistics

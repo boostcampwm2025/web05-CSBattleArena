@@ -68,6 +68,15 @@ export type Question = MultipleQuestion | ShortQuestion | EssayQuestion;
 
 export type AnswerStatus = "incorrect" | "partial" | "correct";
 
-export type SubmissionResult = { status: AnswerStatus; submittedAnswer: string; bestAnswer: string; aiFeedback: string; solvedAt: Date };
+export type SubmissionResult = {
+  status: AnswerStatus;
+  submittedAnswer: string;
+  solvedAt: Date;
+};
 
 export type MatchType = "multi" | "single";
+export type Solution = {
+  bestAnswer: string;
+  explanation: string;
+  aiFeedback: string;
+};
