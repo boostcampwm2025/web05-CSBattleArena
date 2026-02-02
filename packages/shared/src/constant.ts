@@ -5,17 +5,23 @@ export type Profile = {
   createdAt: Date;
 };
 
+export type OpponentProfile = Pick<Profile, "nickname" | "profileImage">;
+
 // ** Rank라는 용어를 Tier로 통일 **
 export type TierInfo = {
   tier: string;
   tierPoint: number;
 };
 
+export type OpponentTierInfo = TierInfo;
+
 export type LevelInfo = {
   level: number;
   needExpPoint: number;
   remainedExpPoint: number;
 };
+
+export type OpponentLevelInfo = Pick<LevelInfo, "level">;
 
 // ** winRate는 winCount / totalMatches로 계산한 값을 사용할 예정 **
 export type MatchStatistics = {
@@ -66,6 +72,8 @@ export type EssayQuestion = QuestionBase & { type: "essay" };
 
 export type Question = MultipleQuestion | ShortQuestion | EssayQuestion;
 
+export type MatchType = "multi" | "single";
+
 export type AnswerStatus = "incorrect" | "partial" | "correct";
 
 export type SubmissionResult = {
@@ -73,8 +81,9 @@ export type SubmissionResult = {
   submittedAnswer: string;
   solvedAt: Date;
 };
+export type MySubmission = Pick<SubmissionResult, "status" | "submittedAnswer">;
+export type OpponentSubmission = Pick<SubmissionResult, "submittedAnswer">;
 
-export type MatchType = "multi" | "single";
 export type Solution = {
   bestAnswer: string;
   explanation: string;
