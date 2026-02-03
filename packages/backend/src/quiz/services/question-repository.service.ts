@@ -139,6 +139,8 @@ export class QuestionRepositoryService {
 
   /**
    * 게임 문제 후보를 단일 쿼리로 조회
+   * - 메모리 효율을 위해 MAX_CANDIDATE_FETCH_COUNT로 제한
+   * - 5개 버킷(난이도×타입 조합)에서 균형있게 선택하기 위한 여유분 포함
    */
   private async fetchAllGameQuestionCandidates(): Promise<QuestionEntity[]> {
     return await this.questionRepository
@@ -156,6 +158,7 @@ export class QuestionRepositoryService {
       )
       .orderBy('q.usageCount', 'ASC')
       .addOrderBy('RANDOM()')
+      .limit(QUIZ_CONSTANTS.MAX_CANDIDATE_FETCH_COUNT)
       .getMany();
   }
 
