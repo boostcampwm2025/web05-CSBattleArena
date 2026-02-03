@@ -30,7 +30,7 @@ const configModule = ConfigModule.forRoot({
 });
 
 const typeOrmModule = TypeOrmModule.forRootAsync({
-  imports: [SentryModule.forRoot(), ConfigModule],
+  imports: [ConfigModule],
   useFactory: (configService: ConfigService) => ({
     type: 'postgres',
     host: configService.get('DB_HOST', 'localhost'),
@@ -47,6 +47,7 @@ const typeOrmModule = TypeOrmModule.forRootAsync({
 
 const metadata: ModuleMetadata = {
   imports: [
+    SentryModule.forRoot(),
     configModule,
     typeOrmModule,
     WinstonModule.forRoot(feedbackLoggerConfig),
