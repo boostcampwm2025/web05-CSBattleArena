@@ -1,5 +1,6 @@
-import { Module, ModuleMetadata } from '@nestjs/common';
+import { MiddlewareConsumer, Module, ModuleMetadata, NestModule } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
+import { MetricsIpMiddleware } from './metrics/metrics-ip.middleware';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { GameModule } from './game/game.module';
@@ -76,4 +77,8 @@ const metadata: ModuleMetadata = {
 };
 
 @Module(metadata)
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(MetricsIpMiddleware).forRoutes('/metrics');
+  }
+}
