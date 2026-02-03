@@ -76,6 +76,10 @@ export class QuestionRepositoryService {
     parentCategoryIds: number[],
     totalCount: number,
   ): Promise<QuestionEntity[]> {
+    if (parentCategoryIds.length === 0) {
+      return [];
+    }
+
     const allQuestions: QuestionEntity[] = [];
     const questionsPerParent = Math.floor(totalCount / parentCategoryIds.length);
     const remainder = totalCount % parentCategoryIds.length;
