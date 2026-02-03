@@ -138,4 +138,6 @@ export type MatchHistoryItem = {
 
 export type MatchHistoryResponse = {
   matchHistory: MatchHistoryItem[];
+  hasMore: boolean;
+  nextCursor?: string;
 };

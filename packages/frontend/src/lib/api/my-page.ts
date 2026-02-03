@@ -59,8 +59,35 @@ async function fetchTierHistory(accessToken: string | null): Promise<TierHistory
   return fetchWithAuth<TierHistoryResponse>(`${API_BASE}/users/me/tier-history`, accessToken);
 }
 
-async function fetchMatchHistory(accessToken: string | null): Promise<MatchHistoryResponse> {
-  return fetchWithAuth<MatchHistoryResponse>(`${API_BASE}/users/me/match-history`, accessToken);
+interface MatchHistoryParams {
+  matchType?: 'all' | 'multi' | 'single';
+  limit?: number;
+  cursor?: string;
+}
+
+async function fetchMatchHistory(
+  accessToken: string | null,
+  params: MatchHistoryParams = {},
+): Promise<MatchHistoryResponse> {
+  const queryParams = new URLSearchParams();
+
+  if (params.matchType && params.matchType !== 'all') {
+    queryParams.append('matchType', params.matchType);
+  }
+
+  if (params.limit) {
+    queryParams.append('limit', params.limit.toString());
+  }
+
+  if (params.cursor) {
+    queryParams.append('cursor', params.cursor);
+  }
+
+  const url = `${API_BASE}/users/me/match-history${
+    queryParams.toString() ? `?${queryParams.toString()}` : ''
+  }`;
+
+  return fetchWithAuth<MatchHistoryResponse>(url, accessToken);
 }
 
 export { fetchMyPageProfile, fetchTierHistory, fetchMatchHistory, ApiError };

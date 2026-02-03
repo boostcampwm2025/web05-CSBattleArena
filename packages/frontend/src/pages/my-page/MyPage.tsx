@@ -5,7 +5,7 @@ import { TierHistoryChart } from './components/TierHistoryChart';
 import { RecentActivityList } from './components/RecentActivityList';
 
 export default function MyPage() {
-  const { profileData, tierHistoryData, matchHistoryData, isLoading, onClickBack } = useMyPage();
+  const { profileData, tierHistoryData, isLoading, onClickBack } = useMyPage();
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -120,11 +120,9 @@ export default function MyPage() {
                   </div>
 
                   {/* Right Column - Recent Activity */}
-                  {matchHistoryData && (
-                    <div className="min-h-0">
-                      <RecentActivityList matchHistory={matchHistoryData.matchHistory} />
-                    </div>
-                  )}
+                  <div className="min-h-0">
+                    <RecentActivityList />
+                  </div>
                 </div>
               </>
             )}

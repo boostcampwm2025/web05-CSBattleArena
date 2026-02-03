@@ -1,8 +1,7 @@
+import { useEffect, useState } from 'react';
+import { useInView } from 'react-intersection-observer';
+import { useInfiniteMatchHistory } from '../hooks/useInfiniteMatchHistory';
 import { MatchHistoryItem, MultiMatch, SingleMatch } from '@/shared/type';
-
-type RecentActivityListProps = {
-  matchHistory: MatchHistoryItem[];
-};
 
 const getMatchConfig = (item: MatchHistoryItem) => {
   if (item.type === 'multi') {
@@ -55,19 +54,75 @@ const getMatchConfig = (item: MatchHistoryItem) => {
   }
 };
 
-export function RecentActivityList({ matchHistory }: RecentActivityListProps) {
+export function RecentActivityList() {
+  const [activeTab, setActiveTab] = useState<'all' | 'multi' | 'single'>('all');
+
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+    useInfiniteMatchHistory(activeTab);
+
+  const { ref, inView } = useInView({
+    threshold: 0,
+    rootMargin: '100px',
+  });
+
+  useEffect(() => {
+    if (inView && hasNextPage && !isFetchingNextPage) {
+      void fetchNextPage();
+    }
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const allMatches = data?.pages.flatMap((page) => page.matchHistory) ?? [];
+
   return (
     <div className="flex h-full flex-col border-2 border-cyan-400 bg-gradient-to-br from-slate-800/90 to-slate-900/90">
-      {/* Header */}
-      <div className="border-b-2 border-cyan-400/30 p-3">
-        <h3 className="text-sm font-bold text-cyan-400" style={{ fontFamily: 'Orbitron' }}>
-          RECENT ACTIVITY
-        </h3>
+      {/* Header with Tabs */}
+      <div className="border-b-2 border-cyan-400/30">
+        <div className="flex">
+          <button
+            onClick={() => setActiveTab('all')}
+            className={`flex-1 border-b-2 px-4 py-2 text-sm font-bold transition-colors ${
+              activeTab === 'all'
+                ? 'border-cyan-400 text-cyan-400'
+                : 'border-transparent text-gray-400 hover:text-cyan-300'
+            }`}
+            style={{ fontFamily: 'Orbitron' }}
+          >
+            ALL
+          </button>
+          <button
+            onClick={() => setActiveTab('multi')}
+            className={`flex-1 border-b-2 px-4 py-2 text-sm font-bold transition-colors ${
+              activeTab === 'multi'
+                ? 'border-cyan-400 text-cyan-400'
+                : 'border-transparent text-gray-400 hover:text-cyan-300'
+            }`}
+            style={{ fontFamily: 'Orbitron' }}
+          >
+            RANKED
+          </button>
+          <button
+            onClick={() => setActiveTab('single')}
+            className={`flex-1 border-b-2 px-4 py-2 text-sm font-bold transition-colors ${
+              activeTab === 'single'
+                ? 'border-cyan-400 text-cyan-400'
+                : 'border-transparent text-gray-400 hover:text-cyan-300'
+            }`}
+            style={{ fontFamily: 'Orbitron' }}
+          >
+            PRACTICE
+          </button>
+        </div>
       </div>
 
       {/* Activity List */}
       <div className="scrollbar-hide flex-1 overflow-y-auto p-3">
-        {matchHistory.length === 0 ? (
+        {isLoading ? (
+          <div className="flex h-full items-center justify-center">
+            <p className="text-sm text-cyan-400" style={{ fontFamily: 'Orbitron' }}>
+              Loading...
+            </p>
+          </div>
+        ) : allMatches.length === 0 ? (
           <div className="flex h-full items-center justify-center">
             <p className="text-sm text-gray-400" style={{ fontFamily: 'Orbitron' }}>
               No recent activity
@@ -75,12 +130,12 @@ export function RecentActivityList({ matchHistory }: RecentActivityListProps) {
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            {matchHistory.map((item, index) => {
+            {allMatches.map((item, index) => {
               const config = getMatchConfig(item);
 
               return (
                 <div
-                  key={index}
+                  key={`${config.date}-${index}`}
                   className="flex gap-3 border p-2 transition-all duration-200 hover:scale-[1.01]"
                   style={{
                     borderColor: config.color,
@@ -127,6 +182,21 @@ export function RecentActivityList({ matchHistory }: RecentActivityListProps) {
                 </div>
               );
             })}
+
+            {/* Infinite scroll trigger */}
+            {hasNextPage && (
+              <div ref={ref} className="py-4 text-center">
+                {isFetchingNextPage ? (
+                  <div className="text-sm text-cyan-400" style={{ fontFamily: 'Orbitron' }}>
+                    Loading more...
+                  </div>
+                ) : (
+                  <div className="text-xs text-gray-500" style={{ fontFamily: 'Orbitron' }}>
+                    Scroll for more
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
