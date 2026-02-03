@@ -137,7 +137,7 @@ Do not include any other text, explanations, or thinking process in the final ou
     }
 
     # API 호출
-    response = requests.post(url, headers=headers, json=data)
+    response = requests.post(url, headers=headers, json=data, timeout=120)
     response.raise_for_status()
 
     result = response.json()
@@ -214,18 +214,22 @@ def generate_questions(
             print(f"[경고] 유효하지 않은 청크 ID로 생성된 문제 스킵: {q_data.get('question', '')[:50]}...")
             continue
 
-        question = GeneratedQuestion(
-            question_type=QuestionType(q_data["question_type"]),
-            difficulty=Difficulty(q_data["difficulty"]),
-            question=q_data["question"],
-            answer=q_data["answer"],
-            explanation=q_data.get("explanation", ""),
-            options=q_data.get("options", []),
-            correct_index=q_data.get("correct_index", 0),
-            category_id=context.category_id,
-            category_name=context.category_name,
-            chunk_ids=filtered_chunk_ids,
-        )
+        try:
+            question = GeneratedQuestion(
+                question_type=QuestionType(q_data["question_type"]),
+                difficulty=Difficulty(q_data["difficulty"]),
+                question=q_data["question"],
+                answer=q_data["answer"],
+                explanation=q_data.get("explanation", ""),
+                options=q_data.get("options", []),
+                correct_index=q_data.get("correct_index", 0),
+                category_id=context.category_id,
+                category_name=context.category_name,
+                chunk_ids=filtered_chunk_ids,
+            )
+        except (ValueError, KeyError) as e:
+            print(f"[경고] 문제 파싱 실패, 스킵: {e}")
+            continue
 
         # 유효성 검증
         is_valid, msg = question.validate()
