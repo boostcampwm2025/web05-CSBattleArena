@@ -1,8 +1,10 @@
+import { ISODateString } from "./common.type";
+
 // ** email 속성은 불필요하다고 판단하여 제거 **
 export type Profile = {
   nickname: string;
   profileImage: string;
-  createdAt: Date;
+  createdAt: ISODateString;
 };
 
 export type OpponentProfile = Pick<Profile, "nickname" | "profileImage">;

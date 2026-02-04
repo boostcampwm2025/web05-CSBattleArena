@@ -1,3 +1,4 @@
+import { ISODateString } from "./constant/common.type";
 import {
   LevelInfo,
   MatchStatistics,
@@ -24,35 +25,36 @@ export interface LoginDevReq {
 // GET /api/auth/github/callback
 
 // GET /api/auth/refresh
-export type RefreshTokenRes =
-  | { ok: true; accessToken: string }
-  | { ok: false; message: string };
+export interface RefreshTokenRes {
+  message: string;
+}
 
 // GET /api/auth/logout
-export type LogoutRes = { ok: true } | { ok: false; message: string };
+// ** 로그아웃은 GET 대신 POST를 사용 **
+// ** 응답 객체를 별도로 사용하지 않는 대신 204 코드로 로그아웃 성공 응답 **
 
 // #endregion
 
 // #region User
 
 // GET /api/users/me
-export type FetchUserInfoRes = {
+export interface FetchUserInfoRes {
   profile: Profile;
   tierInfo: TierInfo;
   levelInfo: LevelInfo;
   matchStatistics: MatchStatistics;
   solvedStatistics: SolvedStatistics;
-};
+}
 
 // GET /api/users/me/tier-history
-export type FetchUserTierHistoryRes = {
-  history: { tierInfo: TierInfo; delta: number; updatedAt: Date }[];
-};
+export interface FetchUserTierHistoryRes {
+  history: { tierInfo: TierInfo; delta: number; updatedAt: ISODateString }[];
+}
 
 // GET /api/users/me/match-history
-export type FetchUserMatchHistoryRes = {
+export interface FetchUserMatchHistoryRes {
   history: { type: MatchType }[];
-};
+}
 
 // #endregion
 
@@ -62,42 +64,41 @@ export type FetchUserMatchHistoryRes = {
 // ** GET /api/quiz/categories 엔드포인트와 중복됨. **
 // ** Category 타입은 GET /api/quiz/categories에서 사용한 응답 객체가 옳바르다고 판단하여 해당 객체로 통일. **
 // ** 단, parentId는 불필요하다고 판단하여 parent를 nullable 값으로 변경하고 parentId 제거. **
-export type FetchCategoriesRes =
-  | { ok: true; categories: Category[] }
-  | { ok: false; message: string };
+export interface FetchCategoriesRes {
+  categories: Category[];
+}
 
 // POST /api/singleplay/start
 // ** 엔드포인트 이름이 새 세션을 가져온다라는 느낌으로 수정하는 것이 좋아보임. **
-// ** 그에 따라 메소드가 POST가 아닌 GET으로 수정할 필요가 있어보임. **
-export type StartSinglePlayRes =
-  | { ok: true; matchId: number }
-  | { ok: false; message: string };
+// ** POST /api/singleplay/sessions **
+export interface StartSinglePlayRes {
+  matchId: number;
+}
 
 // GET /api/singleplay/question?categoryId=
 // ** categoryIds로 이름을 바꾸는게 좋을 듯 **
-export type FetchQuestionRes =
-  | { ok: true; question: Question }
-  | { ok: false; message: string };
+// ** 또한 Restful하게 바꿀려면 GET /api/singleplay/sessions/{sessionId}/question?categoryIds=
+export interface FetchQuestionRes {
+  question: Question;
+}
 
 // POST /api/singleplay/submit
+// ** 마찬가지로 POST /api/singleplay/sessions/{sessionId}/submission
 export interface SubmitAnswerReq {
-  matchId: number;
   questionId: number;
   answer: string;
 }
-export type SubmitAnswerRes =
-  | {
-      ok: true;
-      grade: {
-        submittedAnswer: string;
-        isCorrect: boolean;
-        aiFeedback: string;
-      };
-      level: number;
-      needExpPoint: number;
-      remainedExpPoint: number;
-    }
-  | { ok: false; message: string };
+
+export interface SubmitAnswerRes {
+  grade: {
+    submittedAnswer: string;
+    isCorrect: boolean;
+    aiFeedback: string;
+  };
+  level: number;
+  needExpPoint: number;
+  remainedExpPoint: number;
+}
 
 // #endregion
 
@@ -107,30 +108,28 @@ export type SubmitAnswerRes =
 // ** 필터로 카테고리가 추가될 때 마다 쿼리 파라미터를 새로 추가하여 붙임 **
 // ** http://localhost:3000/api/problem-bank?page=1&limit=9&categoryIds=6&categoryIds=1 **
 // ** 쉼표(,)를 구분자로 활용하여 쿼리 파라미터를 추가하도록 수정할 필요가 있음. (ex. categoryIds=1,6) **
-export type FetchProblemBankRes =
-  | {
-      ok: true;
-      items: {
-        question: Question;
-        mySubmission: MySubmission;
-        solution: Solution;
-        isBookMarked: boolean;
-      }[];
-      totalPages: number;
-      currentPage: number;
-    }
-  | { ok: false; message: string };
+export interface FetchProblemBankRes {
+  items: {
+    question: Question;
+    mySubmission: MySubmission;
+    solution: Solution;
+    isBookmarked: boolean;
+  }[];
+  totalPages: number;
+  currentPage: number;
+}
 
 // GET /api/problem-bank/statistics
-export type FetchSolvedStatisticsRes =
-  | { ok: true; statistics: SolvedStatistics }
-  | { ok: false; message: string };
+export interface FetchSolvedStatisticsRes {
+  statistics: SolvedStatistics;
+}
 
 // PATCH /api/problem-bank/{id}/bookmark
+// ** 리소스 상태를 isBookmarked로 맞춘다는 의미로 PUT이 더 명확해보임 **
+// ** 경로 파라미터도 id보단 questionId로 명확하게 명시해야 함 **
 export interface CheckBookmarkReq {
   isBookmarked: boolean;
 }
-export type CheckBookmarkRes = { ok: true } | { ok: false; message: string };
 
 // #endregion
 
@@ -140,6 +139,5 @@ export type CheckBookmarkRes = { ok: true } | { ok: false; message: string };
 export interface SubmitFeedbackReq {
   content: string;
 }
-export type SubmitFeedbackRes = { ok: true } | { ok: false; message: string };
 
 // #endregion
