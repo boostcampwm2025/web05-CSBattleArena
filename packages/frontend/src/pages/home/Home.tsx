@@ -198,6 +198,7 @@ export default function Home() {
       <button
         className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center border-2 border-cyan-300 bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/50 transition-all duration-200 hover:scale-110 hover:from-cyan-400 hover:to-blue-400"
         style={{ fontFamily: 'Orbitron' }}
+        aria-label="참고 교재 정보 보기"
         onClick={() => setIsOpenReferenceModal(true)}
       >
         <i className="ri-book-2-line text-2xl" />
