@@ -14,13 +14,23 @@ import {
 // 클라이언트에서 서버로 보내는 요청 객체는 interface로, 이외의 모든 요청, 응답 객체는 type으로 선언
 // 네이밍 컨벤션은 요청 객체 마지막에 Dto, 응답 객체 마지막에 Ack 추가
 
+export type WsError = { message: string };
+
+export type AckVoid = { error?: never };
+export type AckData<T> = { data: T; error?: never };
+export type AckError = { error: WsError; data?: never };
+
+export type Ack<T = void> = T extends void
+  ? AckVoid | AckError
+  : AckData<T> | AckError;
+
 // #region Matching
 
 // match:enqueue C -> S (Ack)
-export type MatchEnqueueAck = { ok: true } | { ok: false; message: string };
+export type MatchEnqueueAck = Ack;
 
 // match:dequeue C -> S (Ack)
-export type MatchDequeueAck = { ok: true } | { ok: false; message: string };
+export type MatchDequeueAck = Ack;
 
 // match:found S -> C
 export type MatchFoundDto = {
@@ -87,7 +97,7 @@ export type RoundTickDto = { remainedSec: number };
 export interface SubmitAnswerDto {
   answer: string;
 }
-export type SubmitAnswerAck = { ok: true } | { ok: false; message: string };
+export type SubmitAnswerAck = Ack;
 
 // opponent:submitted S -> C
 
