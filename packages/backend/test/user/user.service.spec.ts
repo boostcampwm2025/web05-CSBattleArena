@@ -518,7 +518,7 @@ describe('UserService', () => {
         player2: { nickname: 'opponent', userProfile: null },
       }));
 
-      const cursor = new Date('2025-01-15T10:30:00Z');
+      const cursor = '2025-01-15T10:30:00.000Z';
       const mockQueryBuilder = {
         leftJoinAndSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
@@ -534,9 +534,11 @@ describe('UserService', () => {
 
       const result = await service.getMatchHistory(1, { cursor, limit: 5 });
 
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('m.createdAt < :cursor', { cursor });
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('m.createdAt < :cursor', {
+        cursor: new Date(cursor),
+      });
       expect(result.hasMore).toBe(true);
-      expect(result.nextCursor).toEqual(mockMatches[mockMatches.length - 1].createdAt);
+      expect(result.nextCursor).toEqual(mockMatches[mockMatches.length - 1].createdAt.toISOString());
     });
 
     it('hasMore를 정확히 반환해야 함', async () => {
@@ -546,7 +548,7 @@ describe('UserService', () => {
         player2Id: 2,
         winnerId: 1,
         matchType: 'multi',
-        createdAt: new Date(`2025-01-${15 - i}T10:30:00Z`),
+        createdAt: new Date(`2025-01-${String(15 - i).padStart(2, '0')}T10:30:00Z`),
         player1: { nickname: 'player1', userProfile: null },
         player2: { nickname: 'opponent', userProfile: null },
       }));
@@ -565,7 +567,7 @@ describe('UserService', () => {
       const result = await service.getMatchHistory(1, { limit: 10 });
 
       expect(result.hasMore).toBe(true);
-      expect(result.nextCursor).toEqual(mockMatches[mockMatches.length - 1].createdAt);
+      expect(result.nextCursor).toEqual(mockMatches[mockMatches.length - 1].createdAt.toISOString());
     });
   });
 });
