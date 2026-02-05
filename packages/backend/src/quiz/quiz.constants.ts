@@ -16,6 +16,8 @@ export const SPEED_BONUS = 5;
 export const QUIZ_CONSTANTS = {
   /** 게임 시작에 필요한 최소 질문 개수 */
   REQUIRED_QUESTION_COUNT: 5,
+  /** 게임 문제 후보 최대 조회 개수 (5개 버킷 × 10개 여유분) */
+  MAX_CANDIDATE_FETCH_COUNT: 50,
 } as const;
 
 /**
