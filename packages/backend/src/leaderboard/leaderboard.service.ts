@@ -2,7 +2,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, Repository } from 'typeorm';
 import { UserStatistics } from '../user/entity/user-statistics.entity';
-import { UserProblemBank } from '../problem-bank/entity/user-problem-bank.entity';
 import { Tier } from '../tier/entity/tier.entity';
 import { MatchType } from './dto/leaderboard-query.dto';
 import { calcLevel } from '../common/utils/level.util';
@@ -197,35 +196,19 @@ export class LeaderboardService {
     const results = await this.userStatisticsRepository
       .createQueryBuilder('us')
       .innerJoin('us.user', 'u')
-      .leftJoin(
-        (qb) =>
-          qb
-            .select('pb.userId', 'odbc')
-            .addSelect('COUNT(*)', 'solved_count')
-            .addSelect(
-              "SUM(CASE WHEN pb.answerStatus = 'correct' THEN 1 ELSE 0 END)",
-              'correct_count',
-            )
-            .from(UserProblemBank, 'pb')
-            .innerJoin('pb.match', 'm')
-            .where("m.matchType = 'single'")
-            .groupBy('pb.userId'),
-        'pb_stats',
-        'us.userId = pb_stats.odbc',
-      )
       .select([
         'u.nickname AS nickname',
         'u.userProfile AS "userProfile"',
         'us.expPoint AS "expPoint"',
-        'COALESCE(pb_stats.solved_count, 0) AS "solvedCount"',
-        'COALESCE(pb_stats.correct_count, 0) AS "correctCount"',
+        'us.solvedCount AS "solvedCount"',
+        'us.correctCount AS "correctCount"',
       ])
       .orderBy('us.expPoint', 'DESC')
       .addOrderBy(
-        'CASE WHEN COALESCE(pb_stats.solved_count, 0) > 0 THEN COALESCE(pb_stats.correct_count, 0) * 1.0 / pb_stats.solved_count ELSE 0 END',
+        'CASE WHEN us.solvedCount > 0 THEN us.correctCount * 1.0 / us.solvedCount ELSE 0 END',
         'DESC',
       )
-      .addOrderBy('COALESCE(pb_stats.solved_count, 0)', 'DESC')
+      .addOrderBy('us.solvedCount', 'DESC')
       .limit(LEADERBOARD_LIMIT)
       .getRawMany<SingleRankingRaw>();
 
@@ -263,28 +246,12 @@ export class LeaderboardService {
     const myStats = await this.userStatisticsRepository
       .createQueryBuilder('us')
       .innerJoin('us.user', 'u')
-      .leftJoin(
-        (qb) =>
-          qb
-            .select('pb.userId', 'odbc')
-            .addSelect('COUNT(*)', 'solved_count')
-            .addSelect(
-              "SUM(CASE WHEN pb.answerStatus = 'correct' THEN 1 ELSE 0 END)",
-              'correct_count',
-            )
-            .from(UserProblemBank, 'pb')
-            .innerJoin('pb.match', 'm')
-            .where("m.matchType = 'single'")
-            .groupBy('pb.userId'),
-        'pb_stats',
-        'us.userId = pb_stats.odbc',
-      )
       .select([
         'u.nickname AS nickname',
         'u.userProfile AS "userProfile"',
         'us.expPoint AS "expPoint"',
-        'COALESCE(pb_stats.solved_count, 0) AS "solvedCount"',
-        'COALESCE(pb_stats.correct_count, 0) AS "correctCount"',
+        'us.solvedCount AS "solvedCount"',
+        'us.correctCount AS "correctCount"',
       ])
       .where('us.userId = :userId', { userId })
       .getRawOne<SingleRankingRaw>();
@@ -298,27 +265,11 @@ export class LeaderboardService {
     const correctCount = Number(myStats.correctCount);
 
     const correctRateExpr =
-      'CASE WHEN COALESCE(pb_stats.solved_count, 0) > 0 THEN COALESCE(pb_stats.correct_count, 0) * 1.0 / pb_stats.solved_count ELSE 0 END';
+      'CASE WHEN us.solvedCount > 0 THEN us.correctCount * 1.0 / us.solvedCount ELSE 0 END';
     const myCorrectRateExpr = solvedCount > 0 ? ':correctCount * 1.0 / :solvedCount' : '0';
 
     const result = await this.userStatisticsRepository
       .createQueryBuilder('us')
-      .leftJoin(
-        (qb) =>
-          qb
-            .select('pb.userId', 'odbc')
-            .addSelect('COUNT(*)', 'solved_count')
-            .addSelect(
-              "SUM(CASE WHEN pb.answerStatus = 'correct' THEN 1 ELSE 0 END)",
-              'correct_count',
-            )
-            .from(UserProblemBank, 'pb')
-            .innerJoin('pb.match', 'm')
-            .where("m.matchType = 'single'")
-            .groupBy('pb.userId'),
-        'pb_stats',
-        'us.userId = pb_stats.odbc',
-      )
       .select('COUNT(*) + 1', 'rank')
       .where('us.expPoint > :expPoint')
       .orWhere(
@@ -330,7 +281,7 @@ export class LeaderboardService {
         new Brackets((qb) => {
           qb.where('us.expPoint = :expPoint')
             .andWhere(`${correctRateExpr} = ${myCorrectRateExpr}`)
-            .andWhere('COALESCE(pb_stats.solved_count, 0) > :solvedCount');
+            .andWhere('us.solvedCount > :solvedCount');
         }),
       )
       .setParameters({ expPoint, correctCount, solvedCount })
