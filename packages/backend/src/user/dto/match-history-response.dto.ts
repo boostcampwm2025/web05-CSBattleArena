@@ -32,5 +32,5 @@ export class MatchHistoryItemDto {
 export class MatchHistoryResponseDto {
   matchHistory: MatchHistoryItemDto[];
   hasMore: boolean;
-  nextCursor?: Date;
+  nextCursor?: string;
 }

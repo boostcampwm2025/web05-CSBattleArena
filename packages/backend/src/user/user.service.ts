@@ -105,7 +105,7 @@ export class UserService {
 
     // 커서 기반 페이지네이션
     if (cursor) {
-      queryBuilder.andWhere('m.createdAt < :cursor', { cursor });
+      queryBuilder.andWhere('m.createdAt < :cursor', { cursor: new Date(cursor) });
     }
 
     const matches = await queryBuilder.getMany();
@@ -115,7 +115,7 @@ export class UserService {
     }
 
     const hasMore = matches.length === limit;
-    const nextCursor = hasMore ? matches[matches.length - 1].createdAt : undefined;
+    const nextCursor = hasMore ? matches[matches.length - 1].createdAt.toISOString() : undefined;
 
     const matchIds = matches.map((m) => Number(m.id));
     const multiMatchIds = matches.filter((m) => m.matchType === 'multi').map((m) => Number(m.id));

@@ -57,7 +57,7 @@ const getMatchConfig = (item: MatchHistoryItem) => {
 export function RecentActivityList() {
   const [activeTab, setActiveTab] = useState<'all' | 'multi' | 'single'>('all');
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error } =
     useInfiniteMatchHistory(activeTab);
 
   const { ref, inView } = useInView({
@@ -121,6 +121,20 @@ export function RecentActivityList() {
             <p className="text-sm text-cyan-400" style={{ fontFamily: 'Orbitron' }}>
               Loading...
             </p>
+          </div>
+        ) : error ? (
+          <div className="flex h-full flex-col items-center justify-center gap-2">
+            <i className="fas fa-exclamation-triangle text-3xl text-red-400" />
+            <p className="text-sm text-red-400" style={{ fontFamily: 'Orbitron' }}>
+              Failed to load match history
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-2 border border-cyan-400 px-4 py-1 text-xs text-cyan-400 transition-colors hover:bg-cyan-400 hover:text-black"
+              style={{ fontFamily: 'Orbitron' }}
+            >
+              RETRY
+            </button>
           </div>
         ) : allMatches.length === 0 ? (
           <div className="flex h-full items-center justify-center">

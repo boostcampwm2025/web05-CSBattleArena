@@ -15,6 +15,5 @@ export class MatchHistoryQueryDto {
 
   @IsOptional()
   @IsISO8601()
-  @Type(() => Date)
-  cursor?: Date;
+  cursor?: string;
 }
