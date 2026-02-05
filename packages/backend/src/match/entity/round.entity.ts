@@ -1,9 +1,19 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { Match } from './match.entity';
 import { Question } from '../../quiz/entity/question.entity';
 import { RoundAnswer } from './round-answer.entity';
 
 @Entity('rounds')
+@Index('idx_round_match', ['matchId'])
+@Index('idx_round_match_number', ['matchId', 'roundNumber'])
 export class Round {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id: number;
