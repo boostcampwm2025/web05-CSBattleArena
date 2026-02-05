@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UserProblemBank } from './entity/user-problem-bank.entity';
+import { UserProblemBank } from './entity';
 import { DifficultyFilter, GetProblemBankQueryDto } from './dto/get-problem-bank-query.dto';
 import {
   ProblemBankItemDto,
@@ -9,6 +9,7 @@ import {
   ProblemBankStatisticsDto,
 } from './dto/problem-bank-response.dto';
 import { UpdateBookmarkDto } from './dto/update-bookmark.dto';
+import { Difficulty, getDifficultyRange, mapDifficulty } from '../common/utils/difficulty.util';
 
 @Injectable()
 export class ProblemBankService {
@@ -43,7 +44,7 @@ export class ProblemBankService {
     }
 
     if (query.difficulty) {
-      const difficultyRange = this.getDifficultyRange(query.difficulty);
+      const difficultyRange = this.getDifficultyRangeFromFilter(query.difficulty);
       queryBuilder.andWhere('q.difficulty BETWEEN :min AND :max', difficultyRange);
     }
 
@@ -126,38 +127,15 @@ export class ProblemBankService {
     });
 
     if (!problemBank) {
-      throw new NotFoundException('Problem bank entry not found');
+      throw new NotFoundException('문제 은행 항목을 찾을 수 없습니다.');
     }
 
     problemBank.isBookmarked = dto.isBookmarked;
     await this.problemBankRepository.save(problemBank);
   }
 
-  private getDifficultyRange(difficulty: DifficultyFilter): { min: number; max: number } {
-    switch (difficulty) {
-      case DifficultyFilter.EASY:
-        return { min: 1, max: 2 };
-      case DifficultyFilter.MEDIUM:
-        return { min: 3, max: 3 };
-      case DifficultyFilter.HARD:
-        return { min: 4, max: 5 };
-    }
-  }
-
-  private mapDifficulty(numDifficulty: number | null): 'easy' | 'medium' | 'hard' {
-    if (!numDifficulty) {
-      return 'medium';
-    }
-
-    if (numDifficulty <= 2) {
-      return 'easy';
-    }
-
-    if (numDifficulty === 3) {
-      return 'medium';
-    }
-
-    return 'hard';
+  private getDifficultyRangeFromFilter(difficulty: DifficultyFilter): { min: number; max: number } {
+    return getDifficultyRange(difficulty.toLowerCase() as Difficulty);
   }
 
   private extractQuestionText(content: string | object): string {
@@ -196,7 +174,7 @@ export class ProblemBankService {
       questionId: item.questionId,
       questionContent: this.extractQuestionText(item.question.content),
       categories: this.extractCategories(item),
-      difficulty: this.mapDifficulty(item.question.difficulty),
+      difficulty: mapDifficulty(item.question.difficulty),
       answerStatus: item.answerStatus || 'incorrect', // null 대체값
       isBookmarked: item.isBookmarked ?? false, // null을 false로 처리
       userAnswer: item.userAnswer || '',

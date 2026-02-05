@@ -1,8 +1,7 @@
 <div align="center">
-  <!-- 배너 이미지 추가 필요 -->
-  <!-- <img width="1000" alt="banner" src="배너_이미지_URL" /> -->
+  <img width="1392" height="768" alt="Gemini Generated Image from Pixelcut" src="https://github.com/user-attachments/assets/6e46624b-d571-4ce3-88df-9cd4336113a3" />
 
-# CS 아레나
+# CS Arena
 
 **CS 학습을 게임처럼, 실력은 면접처럼!** ⚔️
 
@@ -38,7 +37,7 @@ AI 기반 학습 도구가 늘어나고 있지만, 환각(Hallucination) 현상�
 ## 🎯 Core Solution & Values
 
 <div align="center">
-  <strong>CS 배틀 아레나는 실시간 1:1 대결과 RAG 기반 문제 출제를 결합하여<br/>학습 동기와 신뢰도를 동시에 해결합니다.</strong>
+  <strong>CS Arena는 실시간 1:1 대결과 RAG 기반 문제 출제를 결합하여<br/>학습 동기와 신뢰도를 동시에 해결합니다.</strong>
 
   <br />
   <br />
@@ -127,43 +126,9 @@ AI 기반 학습 도구가 늘어나고 있지만, 환각(Hallucination) 현상�
 ## 🏗️ 인프라 아키텍처 (Architecture)
 
 <!-- 아키텍처 다이어그램 이미지 추가 필요 -->
-<!-- <div align="center">
-  <img width="100%" alt="Infrastructure Diagram" src="아키텍처_이미지_URL" />
-</div> -->
-
-### 📂 프로젝트 구조
-
-```
-web05-boostcamp/
-├── packages/
-│   ├── frontend/                 # React 프론트엔드 (Vite)
-│   │   └── src/
-│   │       ├── feature/          # 기능별 모듈 (auth, matching, single-play)
-│   │       ├── pages/            # 라우트 페이지 (home, match, problem-bank, ...)
-│   │       ├── shared/           # 공용 컴포넌트
-│   │       └── lib/              # API 클라이언트, Socket.io
-│   │
-│   ├── backend/                  # NestJS 백엔드
-│   │   └── src/
-│   │       ├── auth/             # 인증 (GitHub OAuth, JWT)
-│   │       ├── matchmaking/      # 실시간 매칭 시스템
-│   │       ├── game/             # 대전 로직 (WebSocket)
-│   │       ├── quiz/             # 퀴즈 출제 및 채점 (Clova Studio)
-│   │       ├── single-play/      # 싱글플레이 모드
-│   │       ├── problem-bank/     # 문제 은행
-│   │       ├── tier/             # 티어 시스템
-│   │       └── leaderboard/      # 리더보드
-│   │
-│   └── rag/                      # RAG 파이프라인 (Python)
-│       ├── retriever.py          # 문서 검색 (pgvector)
-│       ├── question_generator.py # 문제 생성
-│       ├── evaluator.py          # RAG 품질 평가 (RAGAS)
-│       └── prompts/              # LLM 프롬프트 템플릿
-│
-├── .github/workflows/            # CI/CD (GitHub Actions)
-├── docs/                         # 프로젝트 문서
-└── docker-compose.yml            # Docker 환경 설정
-```
+<div align="center">
+  <img width="3764" height="2364" alt="image" src="https://github.com/user-attachments/assets/2761c20a-7c03-4974-b088-d824be0589b5" />
+</div>
 
 <br />
 
@@ -173,38 +138,36 @@ web05-boostcamp/
 
 - Node.js 18.0.0+
 - pnpm 8.0.0+
-- Docker & Docker Compose (선택)
+- Docker & Docker Compose
 
-### 🐳 Docker로 실행 (권장)
+### 🛠️ 설치 및 실행
 
-```bash
-# 1. 저장소 클론
-git clone https://github.com/boostcampwm2025/web05-boostcamp.git
-cd web05-boostcamp
-
-# 2. 환경 변수 설정
-cp .env.example .env
-
-# 3. 전체 스택 실행
-docker compose up -d
-
-# 4. 서비스 확인
-curl http://localhost:4000/api/health  # Backend
-open http://localhost                  # Frontend
-```
-
-### 💻 로컬 개발 환경
-
-```bash
-# 1. 의존성 설치
+```bash                                                                                                   
+# 1. Node.js 설치
+                                                                      
+# macOS                                                                                           
+brew install node
+                                                                                  
+# Windows                                                                                         
+winget install OpenJS.NodeJS.LTS
+                                                                                                                                                          
+# 2. pnpm 설치                                                                                     
+npm install -g pnpm
+                                                                                                                                                                                   
+# 3. 저장소 클론                                                                                     
+git clone https://github.com/boostcampwm2025/web05-CSArena.git                               
+cd web05-CSArena
+                                                                                                                                                                           
+# 4. 의존성 설치                                                                                     
 pnpm install
+                                                                                                                                                                                 
+# 5. 환경 변수 설정                                                                                  
+cp .env.example .env
+                                                                                                                                                                            
+# 6. 실행                                                                                           
+pnpm dev:local
 
-# 2. 개발 서버 실행 (Frontend + Backend 동시)
-pnpm dev
 ```
-
-- Frontend: http://localhost:3000
-- Backend: http://localhost:4000
 
 <br />
 
@@ -227,15 +190,8 @@ pnpm dev
 
 <div align="center">
 
-  ### CS 배틀 아레나와 함께 즐겁게 CS를 마스터하세요! 🎮
+  ### CS Arena와 함께 즐겁게 CS를 마스터하세요! 🎮
 
   질문이나 피드백은 언제나 환영합니다.
 
-  <br />
-
-  **[📖 프로젝트 위키](https://github.com/boostcampwm2025/web05-boostcamp/wiki)** &nbsp; | &nbsp; **[🚀 라이브 데모](https://cs-arena.site)**
-
-  <br />
-
-  Copyright © 2025 **CS 배틀 아레나 Team**. All rights reserved.
 </div>

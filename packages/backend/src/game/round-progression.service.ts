@@ -4,11 +4,12 @@ import { RoundTimer } from './round-timer';
 import { QuizService } from '../quiz/quiz.service';
 import { GameSessionManager } from './game-session-manager';
 import { MatchPersistenceService } from './match-persistence.service';
-import { Difficulty, getValidQuestionType, ROUND_DURATIONS } from './round-timer.constants';
+import { getValidQuestionType, ROUND_DURATIONS } from './round-timer.constants';
 import { SPEED_BONUS } from '../quiz/quiz.constants';
 import { transformQuestionForClient } from './transformers/question.transformer';
 import { FinalResult } from './interfaces/game.interfaces';
 import { RoundResult } from '../quiz/quiz.types';
+import { mapDifficulty } from '../common/utils/difficulty.util';
 
 @Injectable()
 export class RoundProgressionService {
@@ -45,7 +46,7 @@ export class RoundProgressionService {
       const session = this.sessionManager.getGameSession(roomId);
 
       if (!session) {
-        throw new Error(`Session not found: ${roomId}`);
+        throw new Error(`세션을 찾을 수 없습니다: ${roomId}`);
       }
 
       // round:ready 이벤트 발송
@@ -92,17 +93,7 @@ export class RoundProgressionService {
       });
 
       // 난이도 매핑 (DB의 숫자 난이도 -> 문자열)
-      const difficultyNum = question.difficulty || 3;
-      let difficulty: Difficulty;
-
-      if (difficultyNum <= 2) {
-        difficulty = 'easy';
-      } else if (difficultyNum === 3) {
-        difficulty = 'medium';
-      } else {
-        difficulty = 'hard';
-      }
-
+      const difficulty = mapDifficulty(question.difficulty);
       const questionType = getValidQuestionType(question.questionType);
       const questionDuration = ROUND_DURATIONS.QUESTION[questionType][difficulty];
 
@@ -244,11 +235,11 @@ export class RoundProgressionService {
       const question = this.sessionManager.getQuestion(roomId);
 
       if (!roundResult) {
-        throw new Error(`Round result not found for room ${roomId}`);
+        throw new Error(`라운드 결과를 찾을 수 없습니다: ${roomId}`);
       }
 
       if (!question) {
-        throw new Error(`Question not found for room ${roomId}`);
+        throw new Error(`문제를 찾을 수 없습니다: ${roomId}`);
       }
 
       // 문제 타입에 따른 리뷰 시간 계산
@@ -398,7 +389,7 @@ export class RoundProgressionService {
     const session = this.sessionManager.getGameSession(roomId);
 
     if (!session) {
-      throw new Error('Session not found');
+      throw new Error('세션을 찾을 수 없습니다');
     }
 
     const { player1Score, player2Score } = this.sessionManager.getScores(roomId);
