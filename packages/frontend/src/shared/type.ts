@@ -115,6 +115,7 @@ export type Opponent = {
 };
 
 export type MultiMatch = {
+  id: number;
   opponent: Opponent;
   result: 'win' | 'lose' | 'draw';
   myScore: number;
@@ -124,6 +125,7 @@ export type MultiMatch = {
 };
 
 export type SingleMatch = {
+  id: number;
   category: {
     name: string;
   };
@@ -138,4 +140,6 @@ export type MatchHistoryItem = {
 
 export type MatchHistoryResponse = {
   matchHistory: MatchHistoryItem[];
+  hasMore: boolean;
+  nextCursor?: string;
 };

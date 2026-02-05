@@ -156,6 +156,7 @@ describe('UserController', () => {
         {
           type: 'multi',
           match: {
+            id: 1,
             opponent: {
               nickname: 'opponent',
               profileImage: null,
@@ -170,21 +171,29 @@ describe('UserController', () => {
         {
           type: 'single',
           match: {
+            id: 2,
             category: { name: '네트워크' },
             expGained: 30,
             playedAt: new Date('2025-01-15T11:00:00Z'),
           },
         },
       ],
+      hasMore: false,
+      nextCursor: undefined,
+    };
+
+    const mockQuery = {
+      matchType: 'all' as const,
+      limit: 10,
     };
 
     it('매치 히스토리를 반환해야 함', async () => {
       mockUserService.getMatchHistory.mockResolvedValue(mockMatchHistoryResponse);
 
-      const result = await controller.getMatchHistory(mockUser);
+      const result = await controller.getMatchHistory(mockUser, mockQuery);
 
       expect(result).toEqual(mockMatchHistoryResponse);
-      expect(mockUserService.getMatchHistory).toHaveBeenCalledWith(1);
+      expect(mockUserService.getMatchHistory).toHaveBeenCalledWith(1, mockQuery);
     });
   });
 });
