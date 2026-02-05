@@ -239,6 +239,55 @@ describe('SinglePlayService', () => {
         expect.anything(),
         expect.objectContaining({ where: { id: matchId } }),
       );
+
+      expect(mockManager.query).toHaveBeenCalledWith(
+        expect.stringContaining('solved_count = solved_count + 1'),
+        [expect.any(Number), expect.any(Number), 1],
+      );
+    });
+
+    it('오답 제출 시 correct_count는 증가하지 않아야 함', async () => {
+      const userId = '1';
+      const questionId = 1;
+      const answer = 'Wrong Answer';
+      const mockQuestion = {
+        id: 1,
+        questionType: 'short',
+        content: 'What is React?',
+        difficulty: 1,
+        correctAnswer: 'React',
+      } as QuestionEntity;
+
+      const mockGradeResult = [
+        {
+          playerId: 'single-player',
+          answer: 'Wrong Answer',
+          isCorrect: false,
+          score: 0,
+          feedback: 'Incorrect',
+        },
+      ];
+
+      mockQuestionRepository.findOne.mockResolvedValue(mockQuestion);
+      mockQuizService.gradeQuestion.mockResolvedValue(mockGradeResult);
+      mockQuizService.determineAnswerStatus.mockReturnValue('incorrect');
+
+      const matchId = 123;
+      const mockManager = { save: jest.fn(), query: jest.fn(), findOne: jest.fn() };
+
+      mockDataSource.transaction.mockImplementation(async (cb: any) => cb(mockManager));
+
+      mockManager.findOne.mockResolvedValue({ id: matchId, player1Id: 1, matchType: 'single' });
+      mockManager.save.mockResolvedValue({});
+      mockManager.query.mockResolvedValue([[{ exp_point: 0 }], 1]);
+
+      const result = await service.submitAnswer(userId, matchId, questionId, answer);
+
+      expect(result.grade.isCorrect).toBe(false);
+      expect(mockManager.query).toHaveBeenCalledWith(
+        expect.stringContaining('solved_count = solved_count + 1'),
+        [expect.any(Number), expect.any(Number), 0],
+      );
     });
 
     it('존재하지 않는 문제 ID면 NotFoundException을 던져야 함', async () => {

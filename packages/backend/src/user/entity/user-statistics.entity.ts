@@ -26,6 +26,24 @@ export class UserStatistics {
   })
   expPoint: number | null;
 
+  @Column({
+    type: 'int',
+    nullable: false,
+    name: 'solved_count',
+    default: 0,
+    comment: '싱글플레이 푼 문제 수',
+  })
+  solvedCount: number;
+
+  @Column({
+    type: 'int',
+    nullable: false,
+    name: 'correct_count',
+    default: 0,
+    comment: '싱글플레이 정답 수',
+  })
+  correctCount: number;
+
   @Column({ type: 'bigint', nullable: false, name: 'user_id' })
   userId: number;
 

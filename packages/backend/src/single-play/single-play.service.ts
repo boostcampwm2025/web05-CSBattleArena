@@ -288,14 +288,18 @@ export class SinglePlayService {
         aiFeedback: grade.feedback,
       });
 
+      const isCorrect = answerStatus === 'correct';
+
       const result: [{ exp_point: number }[], number] = await manager.query(
         `
         UPDATE user_statistics
-        SET exp_point = COALESCE(exp_point, 0) + $1
+        SET exp_point = COALESCE(exp_point, 0) + $1,
+            solved_count = solved_count + 1,
+            correct_count = correct_count + $3
         WHERE user_id = $2
         RETURNING exp_point
         `,
-        [finalScore, uid],
+        [finalScore, uid, isCorrect ? 1 : 0],
       );
 
       const rows = result[0];

@@ -1,8 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Brackets, Repository } from 'typeorm';
 import { UserStatistics } from '../user/entity/user-statistics.entity';
-import { UserProblemBank } from '../problem-bank/entity/user-problem-bank.entity';
 import { Tier } from '../tier/entity/tier.entity';
 import { MatchType } from './dto/leaderboard-query.dto';
 import { calcLevel } from '../common/utils/level.util';
@@ -148,27 +147,32 @@ export class LeaderboardService {
     const tierPoint = Number(myStats.tierPoint);
     const winCount = Number(myStats.winCount);
     const loseCount = Number(myStats.loseCount);
+    const totalGames = winCount + loseCount;
 
-    // RANK() 윈도우 함수를 사용하여 DB에서 직접 순위 계산
-    const result: Array<{ rank: string | number }> = await this.userStatisticsRepository.query(
-      `
-      SELECT rank FROM (
-        SELECT
-          user_id,
-          RANK() OVER (
-            ORDER BY
-              tier_point DESC,
-              (CASE WHEN win_count + lose_count > 0 THEN win_count * 1.0 / (win_count + lose_count) ELSE 0 END) DESC,
-              (win_count + lose_count) DESC
-          ) as rank
-        FROM user_statistics
-      ) as ranked
-      WHERE user_id = $1
-      `,
-      [userId],
-    );
+    const winRateExpr =
+      'CASE WHEN us.winCount + us.loseCount > 0 THEN us.winCount * 1.0 / (us.winCount + us.loseCount) ELSE 0 END';
+    const myWinRateExpr = totalGames > 0 ? ':winCount * 1.0 / :totalGames' : '0';
 
-    const rank = result[0] ? Number(result[0].rank) : 0;
+    const result = await this.userStatisticsRepository
+      .createQueryBuilder('us')
+      .select('COUNT(*) + 1', 'rank')
+      .where('us.tierPoint > :tierPoint')
+      .orWhere(
+        new Brackets((qb) => {
+          qb.where('us.tierPoint = :tierPoint').andWhere(`${winRateExpr} > ${myWinRateExpr}`);
+        }),
+      )
+      .orWhere(
+        new Brackets((qb) => {
+          qb.where('us.tierPoint = :tierPoint')
+            .andWhere(`${winRateExpr} = ${myWinRateExpr}`)
+            .andWhere('us.winCount + us.loseCount > :totalGames');
+        }),
+      )
+      .setParameters({ tierPoint, winCount, totalGames })
+      .getRawOne<{ rank: string }>();
+
+    const rank = result ? Number(result.rank) : 0;
 
     return {
       rank,
@@ -192,35 +196,19 @@ export class LeaderboardService {
     const results = await this.userStatisticsRepository
       .createQueryBuilder('us')
       .innerJoin('us.user', 'u')
-      .leftJoin(
-        (qb) =>
-          qb
-            .select('pb.userId', 'odbc')
-            .addSelect('COUNT(*)', 'solved_count')
-            .addSelect(
-              "SUM(CASE WHEN pb.answerStatus = 'correct' THEN 1 ELSE 0 END)",
-              'correct_count',
-            )
-            .from(UserProblemBank, 'pb')
-            .innerJoin('pb.match', 'm')
-            .where("m.matchType = 'single'")
-            .groupBy('pb.userId'),
-        'pb_stats',
-        'us.userId = pb_stats.odbc',
-      )
       .select([
         'u.nickname AS nickname',
         'u.userProfile AS "userProfile"',
         'us.expPoint AS "expPoint"',
-        'COALESCE(pb_stats.solved_count, 0) AS "solvedCount"',
-        'COALESCE(pb_stats.correct_count, 0) AS "correctCount"',
+        'us.solvedCount AS "solvedCount"',
+        'us.correctCount AS "correctCount"',
       ])
       .orderBy('us.expPoint', 'DESC')
       .addOrderBy(
-        'CASE WHEN COALESCE(pb_stats.solved_count, 0) > 0 THEN COALESCE(pb_stats.correct_count, 0) * 1.0 / pb_stats.solved_count ELSE 0 END',
+        'CASE WHEN us.solvedCount > 0 THEN us.correctCount * 1.0 / us.solvedCount ELSE 0 END',
         'DESC',
       )
-      .addOrderBy('COALESCE(pb_stats.solved_count, 0)', 'DESC')
+      .addOrderBy('us.solvedCount', 'DESC')
       .limit(LEADERBOARD_LIMIT)
       .getRawMany<SingleRankingRaw>();
 
@@ -258,28 +246,12 @@ export class LeaderboardService {
     const myStats = await this.userStatisticsRepository
       .createQueryBuilder('us')
       .innerJoin('us.user', 'u')
-      .leftJoin(
-        (qb) =>
-          qb
-            .select('pb.userId', 'odbc')
-            .addSelect('COUNT(*)', 'solved_count')
-            .addSelect(
-              "SUM(CASE WHEN pb.answerStatus = 'correct' THEN 1 ELSE 0 END)",
-              'correct_count',
-            )
-            .from(UserProblemBank, 'pb')
-            .innerJoin('pb.match', 'm')
-            .where("m.matchType = 'single'")
-            .groupBy('pb.userId'),
-        'pb_stats',
-        'us.userId = pb_stats.odbc',
-      )
       .select([
         'u.nickname AS nickname',
         'u.userProfile AS "userProfile"',
         'us.expPoint AS "expPoint"',
-        'COALESCE(pb_stats.solved_count, 0) AS "solvedCount"',
-        'COALESCE(pb_stats.correct_count, 0) AS "correctCount"',
+        'us.solvedCount AS "solvedCount"',
+        'us.correctCount AS "correctCount"',
       ])
       .where('us.userId = :userId', { userId })
       .getRawOne<SingleRankingRaw>();
@@ -292,36 +264,30 @@ export class LeaderboardService {
     const solvedCount = Number(myStats.solvedCount);
     const correctCount = Number(myStats.correctCount);
 
-    // RANK() 윈도우 함수를 사용하여 DB에서 직접 순위 계산
-    const result: Array<{ rank: string | number }> = await this.userStatisticsRepository.query(
-      `
-      SELECT rank FROM (
-        SELECT
-          us.user_id,
-          RANK() OVER (
-            ORDER BY
-              us.exp_point DESC,
-              (CASE WHEN COALESCE(pb_stats.solved_count, 0) > 0 THEN COALESCE(pb_stats.correct_count, 0) * 1.0 / pb_stats.solved_count ELSE 0 END) DESC,
-              COALESCE(pb_stats.solved_count, 0) DESC
-          ) as rank
-        FROM user_statistics us
-        LEFT JOIN (
-          SELECT
-            pb.user_id,
-            COUNT(*) as solved_count,
-            SUM(CASE WHEN pb.answer_status = 'correct' THEN 1 ELSE 0 END) as correct_count
-          FROM user_problem_banks pb
-          INNER JOIN matches m ON m.id = pb.match_id
-          WHERE m.match_type = 'single'
-          GROUP BY pb.user_id
-        ) pb_stats ON us.user_id = pb_stats.user_id
-      ) as ranked
-      WHERE user_id = $1
-      `,
-      [userId],
-    );
+    const correctRateExpr =
+      'CASE WHEN us.solvedCount > 0 THEN us.correctCount * 1.0 / us.solvedCount ELSE 0 END';
+    const myCorrectRateExpr = solvedCount > 0 ? ':correctCount * 1.0 / :solvedCount' : '0';
 
-    const rank = result[0] ? Number(result[0].rank) : 0;
+    const result = await this.userStatisticsRepository
+      .createQueryBuilder('us')
+      .select('COUNT(*) + 1', 'rank')
+      .where('us.expPoint > :expPoint')
+      .orWhere(
+        new Brackets((qb) => {
+          qb.where('us.expPoint = :expPoint').andWhere(`${correctRateExpr} > ${myCorrectRateExpr}`);
+        }),
+      )
+      .orWhere(
+        new Brackets((qb) => {
+          qb.where('us.expPoint = :expPoint')
+            .andWhere(`${correctRateExpr} = ${myCorrectRateExpr}`)
+            .andWhere('us.solvedCount > :solvedCount');
+        }),
+      )
+      .setParameters({ expPoint, correctCount, solvedCount })
+      .getRawOne<{ rank: string }>();
+
+    const rank = result ? Number(result.rank) : 0;
 
     return {
       rank,
